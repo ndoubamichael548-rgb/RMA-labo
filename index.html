@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>RMA Labo — HRA Mokolo</title>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js" defer></script>
+<!-- jsPDF chargé uniquement au moment de l'export PDF -->
+<style>
+:root{
+  --bg:#f0f4f8;--wh:#fff;--bd:#e2e8f0;--bd2:#cbd5e1;
+  --pr:#1d4ed8;--prl:#dbeafe;--prd:#1e40af;
+  --re:#dc2626;--rel:#fee2e2;--am:#d97706;--aml:#fef3c7;
+  --gr:#059669;--grl:#d1fae5;--pu:#7c3aed;--pul:#ede9fe;
+  --cy:#0891b2;--cyl:#cffafe;
+  --tx:#1e293b;--mi:#64748b;--li:#94a3b8;
+  --mo:'Courier New',Courier,monospace;--fn:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+  --r:12px;--sh:0 1px 3px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:15px;padding-bottom:80px}
+
+.ah{background:var(--pr);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(29,78,216,.3)}
+.ah h1{font-size:15px;font-weight:800}.ah small{font-size:10px;opacity:.75}
+.conn{display:flex;align-items:center;gap:5px;font-size:11px;opacity:.85}
+.dot{width:8px;height:8px;border-radius:50%;background:#86efac;flex-shrink:0}.dot.r{background:#fca5a5}
+
+/* TOP NAV TABS */
+.tnav{background:var(--pr);display:flex;overflow-x:auto;border-top:1px solid rgba(255,255,255,.15);-webkit-overflow-scrolling:touch}
+.tnav button{flex-shrink:0;background:none;border:none;color:rgba(255,255,255,.65);padding:9px 14px;font-family:var(--fn);font-size:12px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .15s}
+.tnav button.on{color:#fff;border-bottom-color:#fff}
+
+/* BOTTOM NAV */
+.bn{position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--wh);border-top:1px solid var(--bd);display:flex;box-shadow:0 -4px 12px rgba(0,0,0,.08)}
+.bn button{flex:1;background:none;border:none;padding:9px 4px 7px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-family:var(--fn);color:var(--li);font-size:10px;font-weight:700}
+.bn button .ic{font-size:19px;line-height:1}
+.bn button.on{color:var(--pr)}
+
+main{padding:12px;max-width:720px;margin:0 auto}
+.pane{display:none}.pane.on{display:block}
+
+/* DATE BAR */
+.db{background:var(--wh);border-radius:var(--r);padding:11px 14px;box-shadow:var(--sh);margin-bottom:12px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.db label{font-size:10px;font-weight:700;color:var(--mi);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:3px}
+.db input[type=date]{border:1.5px solid var(--bd2);border-radius:8px;padding:7px 10px;font-family:var(--fn);font-size:13px;color:var(--tx);background:var(--bg);font-weight:600}
+.sp{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.sp.new{background:var(--prl);color:var(--pr)}.sp.sv{background:var(--grl);color:var(--gr)}.sp.ld{background:var(--aml);color:var(--am)}
+
+/* SECTION ACCORDION */
+.sec{background:var(--wh);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:10px;border:1px solid var(--bd);overflow:hidden}
+.sh{padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.sh:active{background:var(--bg)}
+.si{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.st2{flex:1}.st2 h3{font-size:13px;font-weight:700}.st2 span{font-size:10px;color:var(--mi)}
+.chv{color:var(--li);font-size:17px;transition:transform .2s}
+.sh.on .chv{transform:rotate(180deg)}
+.sb{display:none;border-top:1px solid var(--bd)}.sb.on{display:block}
+
+/* SUBSECTION */
+.sub{padding:12px 14px;border-bottom:1px solid var(--bg)}.sub:last-child{border-bottom:none}
+.subt{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--mi);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.subt::after{content:'';flex:1;height:1px;background:var(--bd)}
+.subt .badge{font-size:9px;background:var(--prl);color:var(--pr);padding:1px 6px;border-radius:4px;letter-spacing:0;text-transform:none;font-weight:700}
+.subt .badge.auto{background:var(--grl);color:var(--gr)}
+.subt .badge.warn{background:var(--aml);color:var(--am)}
+
+/* FIELD GRID */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.field{background:var(--bg);border-radius:8px;padding:9px 11px}
+.field label{display:block;font-size:10px;font-weight:700;color:var(--mi);margin-bottom:4px;line-height:1.3}
+.field input[type=number]{width:100%;border:1.5px solid var(--bd2);border-radius:6px;padding:7px 8px;font-family:var(--mo);font-size:15px;font-weight:600;color:var(--tx);background:var(--wh);text-align:center;outline:none;transition:border-color .15s}
+.field input:focus{border-color:var(--pr)}
+.field.auto-filled input{border-color:var(--gr);background:var(--grl)}
+.field.warn input{border-color:var(--am)}
+.field .hint{font-size:9px;color:var(--gr);margin-top:2px}
+.field .warn-msg{font-size:9px;color:var(--am);margin-top:2px;display:none}
+.field.warn .warn-msg{display:block}
+
+/* EXAM TABLE — section mère */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px}
+.etbl{border-collapse:collapse;width:max-content;min-width:100%;font-size:11px}
+.etbl th,.etbl td{border:1px solid var(--bd);padding:4px 5px;text-align:center;white-space:nowrap}
+.etbl th{background:var(--bg);font-size:9px;font-weight:700;color:var(--mi);text-transform:uppercase}
+.etbl td.name{text-align:left;position:sticky;left:0;background:var(--wh);font-size:10px;font-weight:700;color:var(--tx);z-index:1;min-width:120px;max-width:160px;white-space:normal;line-height:1.3;padding:4px 7px}
+.etbl tr:hover td.name{background:var(--bg)}
+.etbl input[type=number]{border:none;background:transparent;font-family:var(--mo);font-size:12px;font-weight:600;text-align:center;color:var(--tx);width:42px;padding:2px;outline:none}
+.etbl input:focus{background:var(--pr);color:#fff;border-radius:3px}
+.etbl td.tot{background:var(--prl);font-family:var(--mo);font-size:11px;font-weight:700;color:var(--prd)}
+.etbl td.auto-src{background:rgba(5,150,105,.08)}
+.etbl input.auto-src{color:var(--gr);font-weight:700}
+.etbl tr.sec-hdr td{background:var(--tx);color:#fff;font-weight:800;font-size:10px;text-align:left;padding:5px 8px}
+.etbl tr.sub-hdr td{background:var(--mi);color:#fff;font-size:9px;font-weight:700;text-align:left;padding:3px 8px}
+
+/* AGE-SEX TABLE */
+.agt{border-collapse:collapse;width:max-content;min-width:100%;font-size:11px}
+.agt th,.agt td{border:1px solid var(--bd);padding:4px 5px;text-align:center;white-space:nowrap}
+.agt th{background:var(--bg);font-size:9px;font-weight:700;color:var(--mi)}
+.agt td.s0{text-align:left;background:var(--bg);font-size:10px;font-weight:700;color:var(--mi);position:sticky;left:0;min-width:100px;z-index:1}
+.agt td.s1{background:var(--bg);font-size:10px;font-weight:700;position:sticky;left:100px;min-width:28px;z-index:1;text-align:center}
+.agt th.s0{position:sticky;left:0;z-index:2;background:var(--bg);min-width:100px}
+.agt th.s1{position:sticky;left:100px;z-index:2;background:var(--bg)}
+.agt input[type=number]{border:none;background:transparent;font-family:var(--mo);font-size:12px;font-weight:600;text-align:center;color:var(--tx);width:42px;padding:2px;outline:none}
+.agt input:focus{background:var(--pr);color:#fff;border-radius:3px}
+.agt tr.tot td{background:var(--prl);font-weight:700;color:var(--prd);font-family:var(--mo)}
+.agt tr:hover td:not(.s0):not(.s1){background:rgba(29,78,216,.04)}
+
+.clr-btn{background:var(--rel);border:none;border-radius:7px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0;transition:all .15s;margin-right:4px}
+.clr-btn:active{transform:scale(.9);background:var(--re);color:#fff}
+
+/* SAVE BAR */
+.sbar{background:var(--wh);border-radius:var(--r);box-shadow:0 4px 12px rgba(0,0,0,.1);padding:12px 14px;display:flex;gap:8px;margin-bottom:12px;border:1px solid var(--bd);flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:10px 16px;border-radius:9px;border:none;font-family:var(--fn);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;flex:1;min-width:110px}
+.btn:active{transform:scale(.97)}
+.btn.p{background:var(--pr);color:#fff}.btn.o{background:var(--bg);color:var(--mi);border:1.5px solid var(--bd2)}.btn.g{background:var(--gr);color:#fff}.btn.cy{background:var(--cy);color:#fff}
+
+/* MONTH BAR */
+.mb{background:var(--wh);border-radius:var(--r);box-shadow:var(--sh);padding:11px 14px;margin-bottom:12px;display:flex;gap:8px;align-items:center;border:1px solid var(--bd);flex-wrap:wrap}
+.mb select{flex:1;min-width:110px;border:1.5px solid var(--bd2);border-radius:8px;padding:7px 10px;font-family:var(--fn);font-size:13px;background:var(--bg);color:var(--tx);font-weight:600}
+.btnx{padding:9px 14px;font-size:12px;min-width:auto;flex:0}
+
+/* HISTORY */
+.hl{display:flex;flex-direction:column;gap:8px}
+.hc{background:var(--wh);border-radius:var(--r);box-shadow:var(--sh);padding:11px 14px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hd{font-family:var(--mo);font-size:12px;font-weight:600;color:var(--pr);background:var(--prl);padding:3px 8px;border-radius:5px}
+.hs{font-size:11px;color:var(--mi);margin-top:2px}
+.hb{display:flex;gap:5px;flex-shrink:0}
+.bi{width:34px;height:34px;border-radius:7px;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px}
+.bi:active{transform:scale(.93)}
+.bi.e{background:var(--prl)}.bi.d{background:var(--rel)}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.kpi{background:var(--wh);border-radius:var(--r);box-shadow:var(--sh);padding:11px 13px;border:1px solid var(--bd);border-left:4px solid var(--pr)}
+.kpi.r{border-left-color:var(--re)}.kpi.g{border-left-color:var(--gr)}.kpi.a{border-left-color:var(--am)}.kpi.pu{border-left-color:var(--pu)}.kpi.cy{border-left-color:var(--cy)}
+.kv{font-family:var(--mo);font-size:24px;font-weight:700;line-height:1}
+.kl{font-size:10px;color:var(--mi);margin-top:3px;font-weight:600;line-height:1.3}
+
+/* SYNTH CARD */
+.sc{background:var(--wh);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:10px;border:1px solid var(--bd);overflow:hidden}
+.sch{padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800}
+.scb{padding:10px 14px}
+.tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:9px;font-weight:800;letter-spacing:.5px}
+.st{width:100%;border-collapse:collapse;font-size:11px}
+.st th,.st td{border:1px solid var(--bd);padding:5px 6px;text-align:center}
+.st th{background:var(--bg);font-weight:700;font-size:9px;color:var(--mi);text-transform:uppercase}
+.st td:first-child{text-align:left;font-weight:600;font-size:10px}
+.st td{font-family:var(--mo);font-size:11px}
+.st tfoot td{background:var(--prl);font-weight:700;color:var(--prd)}
+.st tr.sec-row td{background:var(--tx);color:#fff;font-weight:700;font-size:10px}
+.st tr.sub-row td{background:var(--bd);color:var(--mi);font-size:9px}
+
+/* VAL BANNER */
+.vb{background:var(--rel);border:1px solid #fca5a5;border-radius:9px;padding:9px 13px;font-size:12px;color:var(--re);font-weight:600;margin-bottom:10px;display:none;line-height:1.5}
+.vb.on{display:block}
+.warn-banner{background:var(--aml);border:1px solid #fcd34d;border-radius:9px;padding:9px 13px;font-size:12px;color:var(--am);font-weight:600;margin-bottom:10px;display:none;line-height:1.5}
+.warn-banner.on{display:block}
+
+/* TOAST */
+#toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--tx);color:#fff;padding:10px 16px;border-radius:18px;font-size:12px;font-weight:600;opacity:0;transition:all .25s;pointer-events:none;z-index:500;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.s{background:var(--gr)}#toast.e{background:var(--re)}#toast.w{background:var(--am)}
+
+.empty{text-align:center;padding:36px 20px;color:var(--li)}
+.empty .em{font-size:38px;margin-bottom:8px}
+.spin{display:inline-block;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.auto-info{font-size:10px;color:var(--gr);background:var(--grl);padding:4px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px}
+</style>
+<meta name="theme-color" content="#1d4ed8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="RMA Labo">
+<link rel="manifest" href="manifest.json">
+</head>
+<script>
+// ── Service Worker pour mode hors ligne ──
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js')
+      .then(()=>console.log('SW enregistré'))
+      .catch(e=>console.log('SW erreur:',e));
+  });
+}
+</script>
+<body>
+
+<div class="ah">
+  <div><h1>🔬 RMA Laboratoire — HRA Mokolo</h1><small>Extrême-Nord · Cameroun</small></div>
+  <div class="conn"><div class="dot" id="dot"></div><span id="cLbl">…</span></div>
+</div>
+
+<!-- Bannière d'installation PWA -->
+<div id="installBanner" style="display:none;background:#065f46;color:#fff;padding:8px 16px;font-size:12px;font-family:var(--fn);display:none;align-items:center;justify-content:space-between;gap:10px">
+  <span>📱 Installer l'app sur votre téléphone pour un accès hors ligne</span>
+  <div style="display:flex;gap:8px;flex-shrink:0">
+    <button onclick="installApp()" style="background:#fff;color:#065f46;border:none;border-radius:6px;padding:5px 12px;font-weight:700;cursor:pointer;font-size:12px">Installer</button>
+    <button onclick="document.getElementById('installBanner').style.display='none'" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px">✕</button>
+  </div>
+
+<!-- TOP NAVIGATION TABS -->
+<div class="tnav">
+  <button class="on" onclick="showTab('saisie',this)">✏️ Saisie du jour</button>
+  <button onclick="showTab('historique',this)">📋 Historique</button>
+  <button onclick="showTab('synthese',this)">📊 Synthèse RMA</button>
+  <button onclick="showTab('rapport',this)">📄 Rapport Mensuel Labo</button>
+</div>
+
+<main>
+
+<!-- ══════════════════════════════════════
+     TAB: SAISIE
+══════════════════════════════════════ -->
+<div class="pane on" id="pane-saisie">
+  <div class="db">
+    <div><label>Date de saisie</label><input type="date" id="saisieDate"></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <div class="sp new" id="saisieStatus">🆕 Nouveau</div>
+      <div id="liveIndicator" style="font-size:10px;color:var(--gr);display:none;align-items:center;gap:4px">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--gr);display:inline-block;animation:pulse 1.5s infinite"></span>
+        Mise à jour en direct
+      </div>
+    </div>
+  </div>
+  <div class="vb" id="valBanner"></div>
+  <div class="warn-banner" id="warnBanner"></div>
+
+  <!-- ─────────────────────────────────────
+       SECTION MÈRE — RAPPORT MENSUEL EXAMENS
+  ───────────────────────────────────────── -->
+  <div class="sec">
+    <div class="sh on" onclick="tgSec(this)">
+      <div class="si" style="background:#f1f5f9">📋</div>
+      <div class="st2">
+        <h3>Rapport Mensuel des Examens</h3>
+        <span>Section mère — source de vérité pour toutes les autres sections</span>
+      </div>
+      <button class="clr-btn" onclick="clearSection(event,['sero-body','hemato-body','parasito-body','bacterio-body','biochimie-body','transfusion-body','hormono-body'],'Section mère')" title="Effacer section mère">🗑</button>
+      <span class="chv">⌄</span>
+    </div>
+    <div class="sb on">
+
+      <!-- SÉROLOGIE -->
+      <div class="sub">
+        <div class="subt">🔬 Sérologie <span class="badge">Nég(H/F) + Pos(H/F) + Total</span></div>
+        <div class="auto-info">🔗 VIH, HEP-B, HEP-C, TPHA/VDRL, CHLAMYDIA → alimentent automatiquement les grilles V.2.1, V.2.6 et IST</div>
+        <div class="tw">
+          <table class="etbl" id="tbl-sero">
+            <thead>
+              <tr>
+                <th style="position:sticky;left:0;z-index:2;background:var(--bg);min-width:120px">Examen</th>
+                <th colspan="2" style="background:#fef3c7;color:#92400e">NÉGATIFS</th>
+                <th colspan="2" style="background:#fee2e2;color:#991b1b">POSITIFS</th>
+                <th style="background:var(--prl);color:var(--prd)">TOTAL</th>
+              </tr>
+              <tr>
+                <th style="position:sticky;left:0;z-index:2;background:var(--bg)"></th>
+                <th>H</th><th>F</th><th>H</th><th>F</th><th>—</th>
+              </tr>
+            </thead>
+            <tbody id="sero-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- HÉMATOLOGIE -->
+      <div class="sub">
+        <div class="subt">🩸 Hématologie <span class="badge">Nombre réalisé H / F / Total</span></div>
+        <div class="tw">
+          <table class="etbl" id="tbl-hemato">
+            <thead>
+              <tr>
+                <th style="position:sticky;left:0;z-index:2;background:var(--bg);min-width:120px">Examen</th>
+                <th>H</th><th>F</th><th style="background:var(--prl);color:var(--prd)">TOTAL</th>
+              </tr>
+            </thead>
+            <tbody id="hemato-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PARASITOLOGIE -->
+      <div class="sub">
+        <div class="subt">🦠 Parasitologie <span class="badge">Nég(H/F) + Pos(H/F) + Total</span></div>
+        <div class="tw">
+          <table class="etbl" id="tbl-parasito">
+            <thead>
+              <tr>
+                <th style="position:sticky;left:0;z-index:2;background:var(--bg);min-width:120px">Examen</th>
+                <th colspan="2" style="background:#fef3c7;color:#92400e">NÉGATIFS</th>
+                <th colspan="2" style="background:#fee2e2;color:#991b1b">POSITIFS</th>
+                <th style="background:var(--prl);color:var(--prd)">TOTAL</th>
+              </tr>
+              <tr>
+                <th style="position:sticky;left:0;z-index:2;background:var(--bg)"></th>
+                <th>H</th><th>F</th><th>H</th><th>F</th><th>—</th>
+              </tr>
+            </thead>
+            <tbody id="parasito-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BACTÉRIOLOGIE -->
+      <div class="sub">
+        <div class="subt">🧫 Bactériologie <span class="badge">Nég(H/F) + Pos(H/F) + Total</span></div>
+        <div class="tw">
+          <table class="etbl" id="tbl-bacterio">
+            <thead>
+              <tr>
+                <th style="position:sticky;left:0;z-index:2;background:var(--bg);min-width:120px">Examen</th>
+                <th colspan="2" style="background:#fef3c7;color:#92400e">NÉGATIFS</th>
+                <th colspan="2" style="background:#fee2e2;color:#991b1b">POSITIFS</th>
+                <th style="background:var(--prl);color:var(--prd)">TOTAL</th>
+              </tr>
+              <tr>
+                <th style="position:sticky;left:0;z-index:2;background:var(--bg)"></th>
+                <th>H</th><th>F</th><th>H</th><th>F</th><th>—</th>
+              </tr>
+            </thead>
+            <tbody id="bacterio-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BIOCHIMIE -->
+      <div class="sub">
+        <div class="subt">⚗️ Biochimie <span class="badge">Nombre réalisé H / F / Total</span></div>
+        <div class="tw">
+          <table class="etbl" id="tbl-biochimie">
+            <thead>
+              <tr>
+                <th style="position:sticky;left:0;z-index:2;background:var(--bg);min-width:120px">Examen</th>
+                <th>H</th><th>F</th><th style="background:var(--prl);color:var(--prd)">TOTAL</th>
+              </tr>
+            </thead>
+            <tbody id="biochimie-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TRANSFUSION -->
+      <div class="sub">
+        <div class="subt">🩺 Transfusion <span class="badge">Nombre réalisé H / F / Total</span></div>
+        <div class="tw">
+          <table class="etbl" id="tbl-transfusion">
+            <thead>
+              <tr>
+                <th style="position:sticky;left:0;z-index:2;background:var(--bg);min-width:120px">Examen</th>
+                <th>H</th><th>F</th><th style="background:var(--prl);color:var(--prd)">TOTAL</th>
+              </tr>
+            </thead>
+            <tbody id="transfusion-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- HORMONOLOGIE -->
+      <div class="sub">
+        <div class="subt">🧪 Hormonologie <span class="badge">Nég(H/F) + Pos(H/F) + Total</span></div>
+        <div class="tw">
+          <table class="etbl" id="tbl-hormono">
+            <thead>
+              <tr>
+                <th style="position:sticky;left:0;z-index:2;background:var(--bg);min-width:120px">Examen</th>
+                <th colspan="2" style="background:#fef3c7;color:#92400e">NÉGATIFS</th>
+                <th colspan="2" style="background:#fee2e2;color:#991b1b">POSITIFS</th>
+                <th style="background:var(--prl);color:var(--prd)">TOTAL</th>
+              </tr>
+              <tr>
+                <th style="position:sticky;left:0;z-index:2;background:var(--bg)"></th>
+                <th>H</th><th>F</th><th>H</th><th>F</th><th>—</th>
+              </tr>
+            </thead>
+            <tbody id="hormono-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────
+       VI.1 LABO GÉNÉRAL (RMA)
+  ──────────────────────────────── -->
+  <div class="sec">
+    <div class="sh" onclick="tgSec(this)">
+      <div class="si" style="background:#dbeafe">🧪</div>
+      <div class="st2"><h3>Activités du laboratoire</h3><span>VI.1 — Général, qualité, disponibilité</span></div>
+      <button class="clr-btn" onclick="clearSection(event,['lab-body','disc-body'],'VI.1 Laboratoire',['f_rejetes','f_retests','f_invalides','f_interruptions'])" title="Effacer VI.1">🗑</button>
+      <span class="chv">⌄</span>
+    </div>
+    <div class="sb">
+      <div class="sub">
+        <div class="subt">Échantillons par âge et sexe</div>
+        <div class="tw"><table class="agt"><thead>
+          <tr><th class="s0" rowspan="2">Indicateur</th><th class="s1" rowspan="2">S</th><th colspan="2">&lt;5ans</th><th colspan="2">5-14ans</th><th colspan="2">≥15ans</th><th colspan="2">Total</th></tr>
+          <tr><th>H</th><th>F</th><th>H</th><th>F</th><th>H</th><th>F</th><th>H</th><th>F</th></tr>
+        </thead><tbody id="lab-body"></tbody></table></div>
+      </div>
+      <div class="sub">
+        <div class="subt">Examens par discipline</div>
+        <div style="overflow-x:auto"><table class="agt" style="min-width:unset;width:100%"><thead>
+          <tr><th style="text-align:left;min-width:110px">Examens</th><th>Biochimie</th><th>Hémato.</th><th>Sérologie</th><th>Parasito.</th><th>Bactério.</th><th>Autres</th><th>Total</th></tr>
+        </thead><tbody id="disc-body"></tbody></table></div>
+      </div>
+      <div class="sub">
+        <div class="subt">Qualité & disponibilité</div>
+        <div class="fg">
+          <div class="field"><label>Échantillons rejetés</label><input type="number" min="0" id="f_rejetes" placeholder="0"></div>
+          <div class="field"><label>Reprises / retests</label><input type="number" min="0" id="f_retests" placeholder="0"></div>
+          <div class="field"><label>Examens invalidés</label><input type="number" min="0" id="f_invalides" placeholder="0"></div>
+          <div class="field"><label>Jours interruption</label><input type="number" min="0" max="31" id="f_interruptions" placeholder="0"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- V.2.1 VIH -->
+  <div class="sec">
+    <div class="sh" onclick="tgSec(this)">
+      <div class="si" style="background:#fee2e2">🩸</div>
+      <div class="st2"><h3>Dépistage du VIH</h3><span>V.2.1 — Grille âge/sexe <span style="color:var(--gr);font-weight:700">🔗 alimenté par la section mère</span></span></div>
+      <button class="clr-btn" onclick="clearSection(event,['vih-body'],'V.2.1 VIH',['vih_t1','vih_r1','vih_t2','vih_r2'])" title="Effacer VIH">🗑</button>
+      <span class="chv">⌄</span>
+    </div>
+    <div class="sb">
+      <div class="sub">
+        <div class="subt">Grille par âge et sexe</div>
+        <div class="auto-info">🔗 Totaux VIH alimentés automatiquement depuis Sérologie → VIH (positifs H/F)</div>
+        <div class="tw"><table class="agt"><thead>
+          <tr><th class="s0" rowspan="2">Âge</th><th class="s1" rowspan="2">S</th>
+          <th>1.Testées</th><th>2.Retirés</th><th>3.Positives</th><th>4.Nv.Pos</th><th>5.Traitement</th><th>6.Indét.</th></tr>
+          <tr></tr>
+        </thead><tbody id="vih-body"></tbody><tfoot id="vih-foot"></tfoot></table></div>
+      </div>
+      <div class="sub">
+        <div class="subt">Tests invalides</div>
+        <div class="fg">
+          <div class="field"><label>Échantillons testés — Test 1</label><input type="number" min="0" id="vih_t1" placeholder="0"></div>
+          <div class="field"><label>Résultats invalides — Test 1</label><input type="number" min="0" id="vih_r1" placeholder="0"></div>
+          <div class="field"><label>Échantillons testés — Test 2</label><input type="number" min="0" id="vih_t2" placeholder="0"></div>
+          <div class="field"><label>Résultats invalides — Test 2</label><input type="number" min="0" id="vih_r2" placeholder="0"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- V.2.6 HÉPATITES -->
+  <div class="sec">
+    <div class="sh" onclick="tgSec(this)">
+      <div class="si" style="background:#fef3c7">🫀</div>
+      <div class="st2"><h3>Hépatites virales</h3><span>V.2.6 — Grille âge/sexe <span style="color:var(--gr);font-weight:700">🔗 alimenté par la section mère</span></span></div>
+      <button class="clr-btn" onclick="clearSection(event,['hep-body'],'V.2.6 Hépatites',['hep_coinf_total','hep_cv_hvc','hep_hvc_elig','hep_hvb_elig','hep_hvb_new_trait','hep_hvb_old_trait','hep_hvb_sup_cv','hep_hvc_gueri'])" title="Effacer Hépatites">🗑</button>
+      <span class="chv">⌄</span>
+    </div>
+    <div class="sb">
+      <div class="sub">
+        <div class="subt">Indicateurs par tranche d'âge et sexe</div>
+        <div class="auto-info">🔗 Totaux HEP-B / HEP-C positifs alimentés depuis Sérologie</div>
+        <div class="tw"><table class="agt" id="tbl-hep"><thead id="hep-head"></thead><tbody id="hep-body"></tbody><tfoot id="hep-foot"></tfoot></table></div>
+      </div>
+      <div class="sub">
+        <div class="subt">Suivi thérapeutique & co-infections</div>
+        <div class="fg">
+          <div class="field"><label>Total enregistrés HVC+HVB co-inf. VIH</label><input type="number" min="0" id="hep_coinf_total" placeholder="0"></div>
+          <div class="field"><label>HVC ayant fait charge virale</label><input type="number" min="0" id="hep_cv_hvc" placeholder="0"></div>
+          <div class="field"><label>HVC+ éligibles traitement</label><input type="number" min="0" id="hep_hvc_elig" placeholder="0"></div>
+          <div class="field"><label>HVB+ éligibles traitement</label><input type="number" min="0" id="hep_hvb_elig" placeholder="0"></div>
+          <div class="field"><label>Nouveaux HVB+ sous traitement</label><input type="number" min="0" id="hep_hvb_new_trait" placeholder="0"></div>
+          <div class="field"><label>Anciens HVB+ TARV</label><input type="number" min="0" id="hep_hvb_old_trait" placeholder="0"></div>
+          <div class="field"><label>Suppression charge virale HVB+</label><input type="number" min="0" id="hep_hvb_sup_cv" placeholder="0"></div>
+          <div class="field"><label>Guéris hépatite C</label><input type="number" min="0" id="hep_hvc_gueri" placeholder="0"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IST -->
+  <div class="sec">
+    <div class="sh" onclick="tgSec(this)">
+      <div class="si" style="background:#ede9fe">🧬</div>
+      <div class="st2"><h3>IST</h3><span>Infections Sexuellement Transmissibles — âge/sexe <span style="color:var(--gr);font-weight:700">🔗 alimenté par section mère</span></span></div>
+      <button class="clr-btn" onclick="clearSection(event,['ist-body'],'IST')" title="Effacer IST">🗑</button>
+      <span class="chv">⌄</span>
+    </div>
+    <div class="sb">
+      <div class="sub">
+        <div class="auto-info">🔗 TPHA/VDRL → Syphilis · CHLAMYDIA → Chlamydia (positifs H/F depuis Sérologie)</div>
+        <div class="tw"><table class="agt" id="tbl-ist"><thead id="ist-head"></thead><tbody id="ist-body"></tbody><tfoot id="ist-foot"></tfoot></table></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sbar">
+    <button class="btn p" onclick="saveDayData()">💾 Enregistrer</button>
+    <button class="btn o" onclick="clearForm()">🗑 Effacer</button>
+  </div>
+</div>
+
+<!-- ══ HISTORIQUE ══ -->
+<div class="pane" id="pane-historique">
+  <div class="mb">
+    <select id="histMonth"></select><select id="histYear"></select>
+    <button class="btn p btnx" onclick="loadHistory()">↻</button>
+  </div>
+  <div id="histList"><div class="empty"><div class="em">📋</div><p>Appuyez sur ↻ pour charger</p></div></div>
+</div>
+
+<!-- ══ SYNTHÈSE RMA ══ -->
+<div class="pane" id="pane-synthese">
+  <div class="mb">
+    <select id="synthMonth"></select><select id="synthYear"></select>
+    <button class="btn g btnx" onclick="computeSynthese()">📊 Générer</button>
+  </div>
+  <div id="syntheseContent"><div class="empty"><div class="em">📊</div><p>Sélectionnez un mois et appuyez sur Générer</p></div></div>
+</div>
+
+<!-- ══ RAPPORT MENSUEL LABO ══ -->
+<div class="pane" id="pane-rapport">
+  <div class="mb">
+    <select id="rapportMonth"></select><select id="rapportYear"></select>
+    <button class="btn cy btnx" onclick="computeRapport()">📄 Générer</button>
+  </div>
+  <div id="rapportContent"><div class="empty"><div class="em">📋</div><p>Sélectionnez un mois pour générer le Rapport Mensuel des Examens</p></div></div>
+</div>
+
+</main>
+
+<nav class="bn">
+  <button class="on" onclick="showMainTab('saisie',this)"><span class="ic">✏️</span>Saisie</button>
+  <button onclick="showMainTab('historique',this)"><span class="ic">📋</span>Historique</button>
+  <button onclick="showMainTab('synthese',this)"><span class="ic">📊</span>RMA</button>
+  <button onclick="showMainTab('rapport',this)"><span class="ic">📄</span>Rapport</button>
+</nav>
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+// FIREBASE
+// ══════════════════════════════════════════
+firebase.initializeApp({
+  apiKey:"AIzaSyDKfuMb5_ZEbPSMnrE9HFiW0OLx0mFHAts",
+  authDomain:"labo-mokolo.firebaseapp.com",
+  projectId:"labo-mokolo",
+  storageBucket:"labo-mokolo.appspot.com",
+  messagingSenderId:"395095889672",
+  appId:"1:395095889672:web:rma-labo-2026"
+});
+const db=firebase.firestore(), COL='rma_daily';
+
+// ══════════════════════════════════════════
+// CATALOGUE DES EXAMENS
+// ══════════════════════════════════════════
+// type: 'negpos' = Nég(H/F)+Pos(H/F)+Total | 'count' = H/F/Total seulement
+// link: lien automatique vers grille (optionnel)
+const EXAMENS = {
+  serologie: [
+    {k:'vih',      l:'VIH',               type:'negpos', link:{section:'vih', col:'positives'}},
+    {k:'aslo',     l:'ASLO',              type:'negpos'},
+    {k:'widal',    l:'WIDAL',             type:'negpos'},
+    {k:'tpha',     l:'TPHA / VDRL',       type:'negpos', link:{section:'ist', row:'pos_syphilis'}},
+    {k:'hepb',     l:'HEP-B',             type:'negpos', link:{section:'hep', row:'reactifs_hvb'}},
+    {k:'hepc',     l:'HEP-C',             type:'negpos', link:{section:'hep', row:'reactifs_hvc'}},
+    {k:'hpylori',  l:'H. PYLORI',         type:'negpos'},
+    {k:'fr',       l:'FACTEUR RHUMATOÏDE',type:'negpos'},
+    {k:'chlamydia',l:'CHLAMYDIA',         type:'negpos', link:{section:'ist', row:'pos_chlamydia'}},
+    {k:'rubeole',  l:'RUBÉOLE',           type:'negpos'},
+    {k:'electro',  l:'ÉLECTROPHORÈSE Hb', type:'negpos'},
+    {k:'toxo',     l:'TOXOPLASMOSE',      type:'negpos'},
+    {k:'gs',       l:'GS',                type:'negpos'},
+    {k:'tcts',     l:'TC / TS',           type:'negpos'},
+    {k:'txhb',     l:'TXHB',              type:'negpos'},
+    {k:'gtest',    l:'G-TEST',            type:'negpos'},
+  ],
+  hematologie: [
+    {k:'nfs', l:'NFS', type:'count'},
+  ],
+  parasitologie: [
+    {k:'ge',    l:'GE (Goutte Épaisse)',   type:'negpos'},
+    {k:'tdr',   l:'TDR',                   type:'negpos'},
+    {k:'selles',l:'SELLES',                type:'negpos'},
+    {k:'pu',    l:'PU (Pus)',              type:'negpos'},
+    {k:'leish', l:'LEISHMANIOSE',          type:'negpos'},
+    {k:'pcv',   l:'PCV',                   type:'negpos'},
+  ],
+  bacteriologie: [
+    {k:'crachat',  l:'CRACHAT',             type:'negpos'},
+    {k:'snip',     l:'SNIP-TEST',           type:'negpos'},
+    {k:'ponction', l:'LIQUIDE DE PONCTION', type:'negpos'},
+    {k:'ecbu',     l:'ECBU',                type:'negpos'},
+    {k:'lcr',      l:'LCR',                 type:'negpos'},
+  ],
+  biochimie: [
+    {k:'glycemie', l:'GLYCÉMIE',            type:'count'},
+    {k:'ac_urique',l:'ACIDE URIQUE',        type:'count'},
+    {k:'uree',     l:'URÉE',                type:'count'},
+    {k:'creatinine',l:'CRÉATININE',         type:'count'},
+    {k:'ast',      l:'AST / GOT',           type:'count'},
+    {k:'alt',      l:'ALT / GPT',           type:'count'},
+    {k:'calcemie', l:'CALCÉMIE',            type:'count'},
+    {k:'mag',      l:'MAGNÉSÉMIE',          type:'count'},
+    {k:'potassium',l:'POTASSIUM',           type:'count'},
+    {k:'sodium',   l:'SODIUM',              type:'count'},
+    {k:'chlore',   l:'CHLORE',              type:'count'},
+    {k:'bu',       l:'BU / ALB / SUCRE',    type:'count'},
+    {k:'chol_tot', l:'CHOLESTÉROL TOTAL',   type:'count'},
+    {k:'trig',     l:'TRIGLYCÉRIDES',       type:'count'},
+    {k:'chol_hdl', l:'CHOLESTÉROL HDL',     type:'count'},
+    {k:'chol_ldl', l:'CHOLESTÉROL LDL',     type:'count'},
+  ],
+  transfusion: [
+    {k:'transfu',  l:'TRANSFUSION',          type:'count'},
+  ],
+  hormonologie: [
+    {k:'crp',      l:'CRP',                  type:'negpos'},
+    {k:'ddimer',   l:'D-DIMER',              type:'negpos'},
+    {k:'bhcg',     l:'B-HCG',                type:'negpos'},
+    {k:'hba1c',    l:'HbA1C',                type:'negpos'},
+    {k:'psa',      l:'PSA',                  type:'negpos'},
+    {k:'fsh',      l:'FSH',                  type:'negpos'},
+    {k:'troponin', l:'TROPONINE',            type:'negpos'},
+    {k:'t4',       l:'T4',                   type:'negpos'},
+    {k:'t3',       l:'T3',                   type:'negpos'},
+    {k:'lh',       l:'LH',                   type:'negpos'},
+  ],
+};
+
+// RMA constants
+const MONTHS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const VIH_AGES=['<18mois(PCR)','18mois-4ans','5-9ans','10-14ans','15-19ans','20-24ans','25-29ans','30-34ans','35-39ans','40-44ans','45-49ans','+50ans'];
+const VIH_COLS=['testees','retires','positives','nv_pos','traitement','indet'];
+const VIH_COL_L=['1.Testées','2.Retirés','3.Positives','4.Nv.Pos.','5.Traitement','6.Indét.'];
+const LAB_ROWS=[{k:'preleves_labo',l:'Prélevés labo'},{k:'recus_services',l:'Reçus services'},{k:'externes',l:'Externes reçus'},{k:'nfs',l:'NFS réalisées'},{k:'anemies',l:'Anémie (Hb<9)'}];
+const LAB_COLS=['lt5H','lt5F','c5_14H','c5_14F','ge15H','ge15F','totH','totF'];
+const DISC_ROWS=[{k:'echantillons_testes',l:'Échan. testés'},{k:'examens_realises',l:'Examens réalisés'},{k:'resultats_rendus',l:'Résultats rendus'}];
+const DISC_COLS=['biochimie','hematologie','serologie','parasitologie','bacteriologie','autres','total'];
+const HEP_IST_AGES=['<1an','1-4ans','5-9ans','10-14ans','15-19ans','20-24ans','25-49ans','50-55ans','>55ans'];
+const SEX=['H','F','T'];
+const HEP_ROWS=[
+  {k:'tot_tests_hep',l:'1. Total tests hépatites (HBsAg ou Anti-HCV)'},
+  {k:'tests_hvb',    l:'2. Tests hépatite B (HBsAg)'},
+  {k:'tests_hvc',    l:'3. Tests hépatite C (Anti-HCV)'},
+  {k:'reactifs_hep', l:'4. Tests réactifs (HBsAg ou Anti-HCV)'},
+  {k:'reactifs_hvb', l:'5. Tests HBsAg réactifs'},
+  {k:'reactifs_hvc', l:'6. Tests Anti-HCV réactifs'},
+  {k:'pos_hvb_delta',l:'7. Positives HVB et Hépatite Delta'},
+  {k:'pos_hvb_hvc',  l:'8. Positives HVB et HVC'},
+  {k:'tot_tarv_hep', l:'9. Total ayant reçu TAV anti-hépatite'},
+  {k:'tot_pos_hep',  l:'10. Total positives pour une hépatite'},
+];
+const IST_ROWS=[
+  {k:'tot_porteuses_ist',l:'35. Total porteurs IST'},
+  {k:'pos_chlamydia',    l:'36. Positifs Chlamydia'},
+  {k:'pos_mycoplasme',   l:'37. Positifs Mycoplasme'},
+  {k:'pos_syphilis',     l:'38. Positifs Syphilis (TPHA/VDRL)'},
+  {k:'pos_gonococque',   l:'39. Positifs Gonocoque'},
+  {k:'pos_hpv',          l:'40. Positifs HPV'},
+  {k:'pos_autres_ist',   l:'41-42. Positifs autres IST'},
+  {k:'tot_porteuses_ias',l:'48. Total porteurs IAS'},
+];
+const HEP_SIMPLE=['coinf_total','cv_hvc','hvc_elig','hvb_elig','hvb_new_trait','hvb_old_trait','hvb_sup_cv','hvc_gueri'];
+
+let lastCum=null, lastRapportCum=null;
+
+// ══════════════════════════════════════════
+// BUILD EXAM TABLES (section mère)
+// ══════════════════════════════════════════
+function buildExamTable(tbodyId, examens) {
+  const tbody = document.getElementById(tbodyId);
+  examens.forEach(ex => {
+    const tr = document.createElement('tr');
+    if (ex.type === 'negpos') {
+      tr.innerHTML = `
+        <td class="name">${ex.l}${ex.link?'<br><span style="color:var(--gr);font-size:9px">🔗 auto</span>':''}</td>
+        <td><input type="number" min="0" id="sm_${ex.k}_negH" placeholder="-" oninput="onSmInput('${ex.k}')"></td>
+        <td><input type="number" min="0" id="sm_${ex.k}_negF" placeholder="-" oninput="onSmInput('${ex.k}')"></td>
+        <td class="${ex.link?'auto-src':''}"><input type="number" min="0" id="sm_${ex.k}_posH" placeholder="-" class="${ex.link?'auto-src':''}" oninput="onSmInput('${ex.k}')"></td>
+        <td class="${ex.link?'auto-src':''}"><input type="number" min="0" id="sm_${ex.k}_posF" placeholder="-" class="${ex.link?'auto-src':''}" oninput="onSmInput('${ex.k}')"></td>
+        <td class="tot" id="sm_${ex.k}_tot">0</td>`;
+    } else {
+      tr.innerHTML = `
+        <td class="name">${ex.l}</td>
+        <td><input type="number" min="0" id="sm_${ex.k}_H" placeholder="-" oninput="onSmInput('${ex.k}')"></td>
+        <td><input type="number" min="0" id="sm_${ex.k}_F" placeholder="-" oninput="onSmInput('${ex.k}')"></td>
+        <td class="tot" id="sm_${ex.k}_tot">0</td>`;
+    }
+    tbody.appendChild(tr);
+  });
+}
+
+function onSmInput(k) {
+  // Update total
+  const ex = findExam(k);
+  if (!ex) return;
+  if (ex.type === 'negpos') {
+    const nH=parseInt(document.getElementById(`sm_${k}_negH`)?.value)||0;
+    const nF=parseInt(document.getElementById(`sm_${k}_negF`)?.value)||0;
+    const pH=parseInt(document.getElementById(`sm_${k}_posH`)?.value)||0;
+    const pF=parseInt(document.getElementById(`sm_${k}_posF`)?.value)||0;
+    const el=document.getElementById(`sm_${k}_tot`); if(el)el.textContent=nH+nF+pH+pF;
+  } else {
+    const H=parseInt(document.getElementById(`sm_${k}_H`)?.value)||0;
+    const F=parseInt(document.getElementById(`sm_${k}_F`)?.value)||0;
+    const el=document.getElementById(`sm_${k}_tot`); if(el)el.textContent=H+F;
+  }
+  // Push linked values to grilles
+  if (ex.link) pushToGrid(ex);
+  // Warn check
+  checkCrossConsistency();
+}
+
+function findExam(k) {
+  for (const sec of Object.values(EXAMENS)) {
+    const found = sec.find(e => e.k === k);
+    if (found) return found;
+  }
+  return null;
+}
+
+// ══════════════════════════════════════════
+// AUTOMATIC LINK: section mère → grilles
+// ══════════════════════════════════════════
+function pushToGrid(ex) {
+  const pH = parseInt(document.getElementById(`sm_${ex.k}_posH`)?.value)||0;
+  const pF = parseInt(document.getElementById(`sm_${ex.k}_posF`)?.value)||0;
+
+  if (ex.link.section === 'vih') {
+    // Push to VIH totals — put into last age row (+50ans) as a quick reference
+    // Actually: set the "total" display cells and warn if grille sum differs
+    // We don't auto-fill the age grid but we show the reference total
+    document.getElementById('vih_ref_H') && (document.getElementById('vih_ref_H').textContent = pH);
+    document.getElementById('vih_ref_F') && (document.getElementById('vih_ref_F').textContent = pF);
+    updVihTot();
+  }
+
+  if (ex.link.section === 'hep') {
+    // Push to hépatite ENS total row reference
+    const rowKey = ex.link.row; // 'reactifs_hvb' or 'reactifs_hvc'
+    // Set ENS H and F in hep grid
+    const elH = document.getElementById(`hep_${rowKey}_ENS_H`);
+    const elF = document.getElementById(`hep_${rowKey}_ENS_F`);
+    if (elH && !elH.dataset.manuallySet) { elH.value = pH||''; updHepTot(rowKey,'ENS'); }
+    if (elF && !elF.dataset.manuallySet) { elF.value = pF||''; updHepTot(rowKey,'ENS'); }
+  }
+
+  if (ex.link.section === 'ist') {
+    const rowKey = ex.link.row; // 'pos_syphilis' or 'pos_chlamydia'
+    const elH = document.getElementById(`ist_${rowKey}_ENS_H`);
+    const elF = document.getElementById(`ist_${rowKey}_ENS_F`);
+    if (elH && !elH.dataset.manuallySet) { elH.value = pH||''; updIstTot(rowKey,'ENS'); }
+    if (elF && !elF.dataset.manuallySet) { elF.value = pF||''; updIstTot(rowKey,'ENS'); }
+  }
+}
+
+function pushAllLinkedToGrids() {
+  Object.values(EXAMENS).flat().filter(e=>e.link).forEach(ex=>pushToGrid(ex));
+}
+
+// ══════════════════════════════════════════
+// CROSS-CONSISTENCY CHECK
+// ══════════════════════════════════════════
+function checkCrossConsistency() {
+  const warns = [];
+
+  // VIH: section mère vs somme grille
+  const smVihH = parseInt(document.getElementById('sm_vih_posH')?.value)||0;
+  const smVihF = parseInt(document.getElementById('sm_vih_posF')?.value)||0;
+  const grVihH = VIH_AGES.reduce((a,age)=>a+(parseInt(document.getElementById(`vih_${age}_H_positives`)?.value)||0),0);
+  const grVihF = VIH_AGES.reduce((a,age)=>a+(parseInt(document.getElementById(`vih_${age}_F_positives`)?.value)||0),0);
+  if (smVihH>0 && grVihH>0 && smVihH!==grVihH) warns.push(`VIH Positifs H : section mère = ${smVihH}, somme grille V.2.1 = ${grVihH}`);
+  if (smVihF>0 && grVihF>0 && smVihF!==grVihF) warns.push(`VIH Positifs F : section mère = ${smVihF}, somme grille V.2.1 = ${grVihF}`);
+
+  // HEP-B
+  const smHepBH=parseInt(document.getElementById('sm_hepb_posH')?.value)||0;
+  const smHepBF=parseInt(document.getElementById('sm_hepb_posF')?.value)||0;
+  const grHepBH=(parseInt(document.getElementById('hep_reactifs_hvb_ENS_H')?.value)||0);
+  const grHepBF=(parseInt(document.getElementById('hep_reactifs_hvb_ENS_F')?.value)||0);
+  if(smHepBH>0&&grHepBH>0&&smHepBH!==grHepBH) warns.push(`HEP-B Positifs H : section mère = ${smHepBH}, grille V.2.6 = ${grHepBH}`);
+
+  const wb=document.getElementById('warnBanner');
+  if(warns.length){wb.innerHTML='⚠️ Incohérences détectées (enregistrement possible) :<br>'+warns.map(w=>'• '+w).join('<br>');wb.classList.add('on');}
+  else wb.classList.remove('on');
+}
+
+// ══════════════════════════════════════════
+// BUILD RMA TABLES
+// ══════════════════════════════════════════
+function buildLabTable(){
+  const tb=document.getElementById('lab-body');
+  LAB_ROWS.forEach(row=>{
+    ['H','F'].forEach(sex=>{
+      const tr=document.createElement('tr');
+      let h=`<td class="s0">${sex==='H'?row.l:''}</td><td class="s1">${sex}</td>`;
+      LAB_COLS.forEach(col=>{h+=`<td><input type="number" min="0" id="lab_${row.k}_${col}_${sex}" placeholder="-"></td>`;});
+      tr.innerHTML=h; tb.appendChild(tr);
+    });
+  });
+}
+function buildDiscTable(){
+  const tb=document.getElementById('disc-body');
+  DISC_ROWS.forEach(row=>{
+    const tr=document.createElement('tr');
+    let h=`<td style="text-align:left;background:var(--bg);font-size:10px;font-weight:700;color:var(--mi)">${row.l}</td>`;
+    DISC_COLS.forEach(col=>{h+=`<td><input type="number" min="0" id="disc_${row.k}_${col}" placeholder="-"></td>`;});
+    tr.innerHTML=h; tb.appendChild(tr);
+  });
+}
+function buildVihTable(){
+  const tb=document.getElementById('vih-body'), tf=document.getElementById('vih-foot');
+  VIH_AGES.forEach(age=>{
+    ['H','F'].forEach(sex=>{
+      const tr=document.createElement('tr');
+      let h=`<td class="s0">${sex==='H'?age:''}</td><td class="s1">${sex}</td>`;
+      VIH_COLS.forEach(col=>{
+        h+=`<td><input type="number" min="0" id="vih_${age}_${sex}_${col}" placeholder="-" data-col="${col}" oninput="updVihTot();checkCrossConsistency()"></td>`;
+      });
+      tr.innerHTML=h; tb.appendChild(tr);
+    });
+  });
+  // Total row with reference from section mère
+  const tr=document.createElement('tr'); tr.className='tot';
+  let h=`<td class="s0" style="font-weight:800">TOTAL</td><td class="s1"></td>`;
+  VIH_COLS.forEach(col=>{h+=`<td id="vt_${col}">0</td>`;});
+  tr.innerHTML=h; tf.appendChild(tr);
+  // Reference row
+  const tr2=document.createElement('tr');
+  tr2.style.background='rgba(5,150,105,.08)';
+  tr2.innerHTML=`<td class="s0" style="font-size:9px;color:var(--gr);font-weight:700">Réf. section mère</td><td class="s1"></td>
+    <td colspan="2"></td>
+    <td id="vih_ref_H" style="color:var(--gr);font-weight:700;font-family:var(--mo)">—</td>
+    <td id="vih_ref_F" style="color:var(--gr);font-weight:700;font-family:var(--mo)">—</td>
+    <td colspan="2"></td>`;
+  tf.appendChild(tr2);
+}
+function updVihTot(){
+  VIH_COLS.forEach(col=>{
+    let s=0;
+    document.querySelectorAll(`#vih-body input[data-col="${col}"]`).forEach(i=>s+=parseInt(i.value)||0);
+    const el=document.getElementById('vt_'+col); if(el)el.textContent=s;
+  });
+}
+function buildHepTable(){
+  const thead=document.getElementById('hep-head'),tbody=document.getElementById('hep-body'),tfoot=document.getElementById('hep-foot');
+  let hh=`<tr><th class="s0" rowspan="2">Indicateur</th>`;
+  HEP_IST_AGES.forEach(a=>{hh+=`<th colspan="3">${a}</th>`;});
+  hh+=`<th colspan="3">ENS</th></tr><tr>`;
+  for(let i=0;i<=HEP_IST_AGES.length;i++)hh+=`<th>H</th><th>F</th><th>T</th>`;
+  hh+=`</tr>`; thead.innerHTML=hh;
+  HEP_ROWS.forEach(row=>{
+    const tr=document.createElement('tr');
+    let h=`<td class="s0" style="font-size:9px;white-space:normal;max-width:110px">${row.l}</td>`;
+    [...HEP_IST_AGES,'ENS'].forEach(age=>{
+      ['H','F','T'].forEach(sex=>{
+        if(sex==='T'){h+=`<td id="ht_${row.k}_${age}" style="font-family:var(--mo);font-size:11px;font-weight:600;background:rgba(29,78,216,.04)">0</td>`;}
+        else{h+=`<td><input type="number" min="0" id="hep_${row.k}_${age}_${sex}" placeholder="-" data-hrow="${row.k}" data-age="${age}" data-sex="${sex}" oninput="updHepTot('${row.k}','${age}');checkCrossConsistency()"></td>`;}
+      });
+    });
+    tr.innerHTML=h; tbody.appendChild(tr);
+  });
+}
+function updHepTot(rk,age){
+  const h=parseInt(document.getElementById(`hep_${rk}_${age}_H`)?.value)||0;
+  const f=parseInt(document.getElementById(`hep_${rk}_${age}_F`)?.value)||0;
+  const t=document.getElementById(`ht_${rk}_${age}`); if(t)t.textContent=h+f;
+  let totH=0,totF=0;
+  HEP_IST_AGES.forEach(a=>{totH+=parseInt(document.getElementById(`hep_${rk}_${a}_H`)?.value)||0;totF+=parseInt(document.getElementById(`hep_${rk}_${a}_F`)?.value)||0;});
+  const eh=document.getElementById(`hep_${rk}_ENS_H`); if(eh&&!eh.dataset.manuallySet){eh.value=totH||'';}
+  const ef=document.getElementById(`hep_${rk}_ENS_F`); if(ef&&!ef.dataset.manuallySet){ef.value=totF||'';}
+  const et=document.getElementById(`ht_${rk}_ENS`); if(et)et.textContent=totH+totF;
+}
+function buildIstTable(){
+  const thead=document.getElementById('ist-head'),tbody=document.getElementById('ist-body');
+  let hh=`<tr><th class="s0" rowspan="2">Indicateur</th>`;
+  HEP_IST_AGES.forEach(a=>{hh+=`<th colspan="3">${a}</th>`;});
+  hh+=`<th colspan="3">ENS</th></tr><tr>`;
+  for(let i=0;i<=HEP_IST_AGES.length;i++)hh+=`<th>H</th><th>F</th><th>T</th>`;
+  hh+=`</tr>`; thead.innerHTML=hh;
+  IST_ROWS.forEach(row=>{
+    const tr=document.createElement('tr');
+    let h=`<td class="s0" style="font-size:9px;white-space:normal;max-width:110px">${row.l}</td>`;
+    [...HEP_IST_AGES,'ENS'].forEach(age=>{
+      ['H','F','T'].forEach(sex=>{
+        if(sex==='T'){h+=`<td id="it_${row.k}_${age}" style="font-family:var(--mo);font-size:11px;font-weight:600;background:rgba(124,58,237,.04)">0</td>`;}
+        else{h+=`<td><input type="number" min="0" id="ist_${row.k}_${age}_${sex}" placeholder="-" data-irow="${row.k}" data-age="${age}" data-sex="${sex}" oninput="updIstTot('${row.k}','${age}');checkCrossConsistency()"></td>`;}
+      });
+    });
+    tr.innerHTML=h; tbody.appendChild(tr);
+  });
+}
+function updIstTot(rk,age){
+  const h=parseInt(document.getElementById(`ist_${rk}_${age}_H`)?.value)||0;
+  const f=parseInt(document.getElementById(`ist_${rk}_${age}_F`)?.value)||0;
+  const t=document.getElementById(`it_${rk}_${age}`); if(t)t.textContent=h+f;
+  let totH=0,totF=0;
+  HEP_IST_AGES.forEach(a=>{totH+=parseInt(document.getElementById(`ist_${rk}_${a}_H`)?.value)||0;totF+=parseInt(document.getElementById(`ist_${rk}_${a}_F`)?.value)||0;});
+  const eh=document.getElementById(`ist_${rk}_ENS_H`); if(eh&&!eh.dataset.manuallySet){eh.value=totH||'';}
+  const ef=document.getElementById(`ist_${rk}_ENS_F`); if(ef&&!ef.dataset.manuallySet){ef.value=totF||'';}
+  const et=document.getElementById(`it_${rk}_ENS`); if(et)et.textContent=totH+totF;
+}
+
+// ══════════════════════════════════════════
+// COLLECT / POPULATE
+// ══════════════════════════════════════════
+function collect(){
+  const d={sm:{},labo:{age:{},disc:{}},vih:{ages:{}},hepatites:{grid:{},simple:{}},ist:{grid:{}}};
+
+  // Section mère
+  Object.entries(EXAMENS).forEach(([sec,exams])=>{
+    d.sm[sec]={};
+    exams.forEach(ex=>{
+      if(ex.type==='negpos'){
+        d.sm[sec][ex.k]={
+          negH:parseInt(document.getElementById(`sm_${ex.k}_negH`)?.value)||0,
+          negF:parseInt(document.getElementById(`sm_${ex.k}_negF`)?.value)||0,
+          posH:parseInt(document.getElementById(`sm_${ex.k}_posH`)?.value)||0,
+          posF:parseInt(document.getElementById(`sm_${ex.k}_posF`)?.value)||0,
+        };
+      } else {
+        d.sm[sec][ex.k]={
+          H:parseInt(document.getElementById(`sm_${ex.k}_H`)?.value)||0,
+          F:parseInt(document.getElementById(`sm_${ex.k}_F`)?.value)||0,
+        };
+      }
+    });
+  });
+
+  // Labo age
+  LAB_ROWS.forEach(r=>{d.labo.age[r.k]={};LAB_COLS.forEach(col=>['H','F'].forEach(sex=>{const el=document.getElementById(`lab_${r.k}_${col}_${sex}`);d.labo.age[r.k][`${col}_${sex}`]=el?parseInt(el.value)||0:0;}));});
+  DISC_ROWS.forEach(r=>{d.labo.disc[r.k]={};DISC_COLS.forEach(col=>{const el=document.getElementById(`disc_${r.k}_${col}`);d.labo.disc[r.k][col]=el?parseInt(el.value)||0:0;});});
+  ['rejetes','retests','invalides','interruptions'].forEach(k=>{d.labo[k]=parseInt(document.getElementById('f_'+k)?.value)||0;});
+
+  // VIH
+  VIH_AGES.forEach(age=>{d.vih.ages[age]={};['H','F'].forEach(sex=>{d.vih.ages[age][sex]={};VIH_COLS.forEach(col=>{const el=document.getElementById(`vih_${age}_${sex}_${col}`);d.vih.ages[age][sex][col]=el?parseInt(el.value)||0:0;});});});
+  ['t1','r1','t2','r2'].forEach(k=>{d.vih['inv_'+k]=parseInt(document.getElementById('vih_'+k)?.value)||0;});
+
+  // Hépatites grid
+  HEP_ROWS.forEach(r=>{d.hepatites.grid[r.k]={};[...HEP_IST_AGES,'ENS'].forEach(age=>{d.hepatites.grid[r.k][age]={H:parseInt(document.getElementById(`hep_${r.k}_${age}_H`)?.value)||0,F:parseInt(document.getElementById(`hep_${r.k}_${age}_F`)?.value)||0};});});
+  HEP_SIMPLE.forEach(k=>{d.hepatites.simple[k]=parseInt(document.getElementById('hep_'+k)?.value)||0;});
+
+  // IST grid
+  IST_ROWS.forEach(r=>{d.ist.grid[r.k]={};[...HEP_IST_AGES,'ENS'].forEach(age=>{d.ist.grid[r.k][age]={H:parseInt(document.getElementById(`ist_${r.k}_${age}_H`)?.value)||0,F:parseInt(document.getElementById(`ist_${r.k}_${age}_F`)?.value)||0};});});
+
+  return d;
+}
+
+function populate(data){
+  if(!data)return;
+  const{sm,labo,vih,hepatites,ist}=data;
+
+  // Section mère
+  if(sm) Object.entries(EXAMENS).forEach(([sec,exams])=>{
+    exams.forEach(ex=>{
+      const v=sm[sec]?.[ex.k];
+      if(!v)return;
+      if(ex.type==='negpos'){
+        ['negH','negF','posH','posF'].forEach(f=>{const el=document.getElementById(`sm_${ex.k}_${f}`);if(el)el.value=v[f]||'';});
+        onSmInput(ex.k);
+      } else {
+        ['H','F'].forEach(f=>{const el=document.getElementById(`sm_${ex.k}_${f}`);if(el)el.value=v[f]||'';});
+        onSmInput(ex.k);
+      }
+    });
+  });
+
+  // Labo
+  if(labo?.age)LAB_ROWS.forEach(r=>LAB_COLS.forEach(col=>['H','F'].forEach(sex=>{const el=document.getElementById(`lab_${r.k}_${col}_${sex}`);if(el)el.value=labo.age[r.k]?.[`${col}_${sex}`]||'';})));
+  if(labo?.disc)DISC_ROWS.forEach(r=>DISC_COLS.forEach(col=>{const el=document.getElementById(`disc_${r.k}_${col}`);if(el)el.value=labo.disc[r.k]?.[col]||'';}));
+  ['rejetes','retests','invalides','interruptions'].forEach(k=>{const el=document.getElementById('f_'+k);if(el)el.value=labo?.[k]||'';});
+
+  // VIH
+  if(vih?.ages)VIH_AGES.forEach(age=>['H','F'].forEach(sex=>VIH_COLS.forEach(col=>{const el=document.getElementById(`vih_${age}_${sex}_${col}`);if(el)el.value=vih.ages[age]?.[sex]?.[col]||'';})));
+  ['t1','r1','t2','r2'].forEach(k=>{const el=document.getElementById('vih_'+k);if(el)el.value=vih?.['inv_'+k]||'';});
+  updVihTot();
+
+  // Hépatites
+  if(hepatites?.grid)HEP_ROWS.forEach(r=>[...HEP_IST_AGES,'ENS'].forEach(age=>['H','F'].forEach(sex=>{const el=document.getElementById(`hep_${r.k}_${age}_${sex}`);if(el){el.value=hepatites.grid[r.k]?.[age]?.[sex]||'';updHepTot(r.k,age);}})));
+  if(hepatites?.simple)HEP_SIMPLE.forEach(k=>{const el=document.getElementById('hep_'+k);if(el)el.value=hepatites.simple[k]||'';});
+
+  // IST
+  if(ist?.grid)IST_ROWS.forEach(r=>[...HEP_IST_AGES,'ENS'].forEach(age=>['H','F'].forEach(sex=>{const el=document.getElementById(`ist_${r.k}_${age}_${sex}`);if(el){el.value=ist.grid[r.k]?.[age]?.[sex]||'';updIstTot(r.k,age);}})));
+
+  checkCrossConsistency();
+}
+
+// ══════════════════════════════════════════
+// FIREBASE OPS
+// ══════════════════════════════════════════
+async function saveDayData(){
+  const date=document.getElementById('saisieDate').value;
+  if(!date){toast('Sélectionnez une date','e');return;}
+  setStatus('ld');
+  isSavingMyself = true;
+  try{
+    await db.collection(COL).doc(date).set({...collect(),date,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    setStatus('sv');
+    isSavingMyself = false;
+    const hasWarn=document.getElementById('warnBanner').classList.contains('on');
+    toast(hasWarn?'✅ Enregistré (avec avertissements)':'✅ Données du '+fmt(date)+' enregistrées !', hasWarn?'w':'s');
+  }catch(e){isSavingMyself=false;setStatus('new');toast('Erreur: '+e.message,'e');}
+}
+// ── Realtime listener for current day ──
+let currentListener = null;
+let isSavingMyself = false; // flag to distinguish own saves from remote updates
+
+function listenToDay(date){
+  if(currentListener){ currentListener(); currentListener=null; }
+  setStatus('ld');
+  let firstLoad = true;
+  currentListener = db.collection(COL).doc(date).onSnapshot(doc=>{
+    if(doc.exists){
+      populate(doc.data());
+      setStatus('sv');
+      // Show live indicator only for remote updates (not own saves)
+      if(!firstLoad && !isSavingMyself){
+        const li = document.getElementById('liveIndicator');
+        if(li){ li.style.display='flex'; setTimeout(()=>{ li.style.display='none'; },4000); }
+        toast('🔄 Données mises à jour par un collègue','w');
+      }
+      firstLoad = false;
+    } else {
+      if(firstLoad){ setStatus('new'); firstLoad=false; }
+    }
+  }, err=>{
+    setStatus('new');
+  });
+}
+
+async function loadDay(date){
+  listenToDay(date);
+}
+function clearForm(){clearInputs();document.getElementById('saisieDate').value=today();setStatus('new');document.getElementById('valBanner').classList.remove('on');document.getElementById('warnBanner').classList.remove('on');}
+
+function clearSection(event, tbodyIds, sectionName, extraIds=[]) {
+  // Stop click from toggling the accordion
+  event.stopPropagation();
+  if (!confirm(`Effacer toutes les données de la section "${sectionName}" ?`)) return;
+  tbodyIds.forEach(id => {
+    const tb = document.getElementById(id);
+    if (tb) tb.querySelectorAll('input[type=number]').forEach(i => i.value = '');
+  });
+  extraIds.forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  // Refresh totals
+  updVihTot();
+  HEP_ROWS.forEach(r => [...HEP_IST_AGES,'ENS'].forEach(a => updHepTot(r.k, a)));
+  IST_ROWS.forEach(r => [...HEP_IST_AGES,'ENS'].forEach(a => updIstTot(r.k, a)));
+  // Refresh section mère totals
+  Object.values(EXAMENS).flat().forEach(ex => onSmInput(ex.k));
+  checkCrossConsistency();
+  toast(`Section "${sectionName}" effacée`, 'w');
+}
+function clearInputs(){document.querySelectorAll('#pane-saisie input[type=number]').forEach(i=>i.value='');updVihTot();}
+function setStatus(s){const el=document.getElementById('saisieStatus');el.className='sp '+s;el.textContent=s==='new'?'🆕 Nouveau':s==='sv'?'✅ Sauvegardé':'⟳ …';}
+
+// ══════════════════════════════════════════
+// HISTORY
+// ══════════════════════════════════════════
+async function loadHistory(){
+  const m=String(document.getElementById('histMonth').value).padStart(2,'0');
+  const y=document.getElementById('histYear').value;
+  const pf=`${y}-${m}`;
+  const el=document.getElementById('histList');
+  el.innerHTML='<div class="empty"><span class="spin">⟳</span></div>';
+  try{
+    const snap=await db.collection(COL).where(firebase.firestore.FieldPath.documentId(),'>=',pf+'-01').where(firebase.firestore.FieldPath.documentId(),'<=',pf+'-31').get();
+    if(snap.empty){el.innerHTML='<div class="empty"><div class="em">🗂</div><p>Aucune saisie</p></div>';return;}
+    el.innerHTML='';
+    // Sort client-side descending by date (no index required)
+    const sorted=[...snap.docs].sort((a,b)=>b.id.localeCompare(a.id));
+    const list=document.createElement('div');list.className='hl';
+    sorted.forEach(doc=>{
+      const d=doc.data();
+      const vt=sumVih(d.vih?.ages,'testees'), vp=sumVih(d.vih?.ages,'positives');
+      const ex=d.labo?.disc?.examens_realises?.total||0;
+      const smTotal=Object.values(d.sm||{}).reduce((a,sec)=>a+Object.values(sec).reduce((b,v)=>b+(v.posH||0)+(v.posF||0)+(v.H||0)+(v.F||0),0),0);
+      const card=document.createElement('div');card.className='hc';
+      card.innerHTML=`
+        <div><div class="hd">${fmt(doc.id)}</div>
+        <div class="hs">Exam RMA: ${ex} · VIH+ ${vp}/${vt} · Total examens labo: ${smTotal}</div></div>
+        <div class="hb">
+          <button class="bi e" onclick="editDay('${doc.id}')">✏️</button>
+          <button class="bi d" onclick="deleteDay('${doc.id}')">🗑</button>
+        </div>`;
+      list.appendChild(card);
+    });
+    el.appendChild(list);
+  }catch(e){el.innerHTML=`<div class="empty"><p>Erreur: ${e.message}</p></div>`;}
+}
+function editDay(date){document.getElementById('saisieDate').value=date;showMainTab('saisie',document.querySelector('.bn button'));loadDay(date);}
+async function deleteDay(date){if(!confirm('Supprimer '+fmt(date)+' ?'))return;await db.collection(COL).doc(date).delete();toast('Supprimé','s');loadHistory();}
+
+// ══════════════════════════════════════════
+// SYNTHÈSE RMA
+// ══════════════════════════════════════════
+async function computeSynthese(){
+  const month=String(document.getElementById('synthMonth').value).padStart(2,'0');
+  const year=document.getElementById('synthYear').value;
+  const mLabel=MONTHS[parseInt(month)-1];
+  const pf=`${year}-${month}`;
+  const el=document.getElementById('syntheseContent');
+  el.innerHTML='<div class="empty"><span class="spin">⟳</span></div>';
+  try{
+    const snap=await db.collection(COL).where(firebase.firestore.FieldPath.documentId(),'>=',pf+'-01').where(firebase.firestore.FieldPath.documentId(),'<=',pf+'-31').get();
+    if(snap.empty){el.innerHTML='<div class="empty"><div class="em">📭</div><p>Aucune donnée</p></div>';return;}
+    const docs=snap.docs.map(d=>d.data());
+    const cum=buildCumul(docs);
+    lastCum={cum,mLabel,year,month,jours:docs.length};
+    renderSynthese(el,cum,mLabel,year,docs.length);
+  }catch(e){el.innerHTML=`<div class="empty"><p>Erreur: ${e.message}</p></div>`;}
+}
+
+// ══════════════════════════════════════════
+// RAPPORT MENSUEL LABO
+// ══════════════════════════════════════════
+async function computeRapport(){
+  const month=String(document.getElementById('rapportMonth').value).padStart(2,'0');
+  const year=document.getElementById('rapportYear').value;
+  const mLabel=MONTHS[parseInt(month)-1];
+  const pf=`${year}-${month}`;
+  const el=document.getElementById('rapportContent');
+  el.innerHTML='<div class="empty"><span class="spin">⟳</span></div>';
+  try{
+    const snap=await db.collection(COL).where(firebase.firestore.FieldPath.documentId(),'>=',pf+'-01').where(firebase.firestore.FieldPath.documentId(),'<=',pf+'-31').get();
+    if(snap.empty){el.innerHTML='<div class="empty"><div class="em">📭</div><p>Aucune donnée</p></div>';return;}
+    const docs=snap.docs.map(d=>d.data());
+    const cumSm=buildSmCumul(docs);
+    const cumRma=buildCumul(docs);
+    lastRapportCum={cumSm,cumRma,mLabel,year,month,jours:docs.length};
+    renderRapport(el,cumSm,cumRma,mLabel,year,docs.length);
+  }catch(e){el.innerHTML=`<div class="empty"><p>Erreur: ${e.message}</p></div>`;}
+}
+
+function buildCumul(docs){
+  const c={age:{},disc:{},labo:{},vih:{},hep_grid:{},hep_simple:{},ist_grid:{}};
+  LAB_ROWS.forEach(r=>{c.age[r.k]={};LAB_COLS.forEach(col=>['H','F'].forEach(s=>{c.age[r.k][`${col}_${s}`]=0;}));});
+  DISC_ROWS.forEach(r=>{c.disc[r.k]={};DISC_COLS.forEach(col=>{c.disc[r.k][col]=0;});});
+  ['rejetes','retests','invalides','interruptions'].forEach(k=>c.labo[k]=0);
+  VIH_AGES.forEach(age=>{c.vih[age]={};['H','F'].forEach(sex=>{c.vih[age][sex]={};VIH_COLS.forEach(col=>{c.vih[age][sex][col]=0;});});});
+  HEP_ROWS.forEach(r=>{c.hep_grid[r.k]={};[...HEP_IST_AGES,'ENS'].forEach(age=>{c.hep_grid[r.k][age]={H:0,F:0};});});
+  HEP_SIMPLE.forEach(k=>c.hep_simple[k]=0);
+  IST_ROWS.forEach(r=>{c.ist_grid[r.k]={};[...HEP_IST_AGES,'ENS'].forEach(age=>{c.ist_grid[r.k][age]={H:0,F:0};});});
+  docs.forEach(d=>{
+    LAB_ROWS.forEach(r=>LAB_COLS.forEach(col=>['H','F'].forEach(s=>{c.age[r.k][`${col}_${s}`]+=d.labo?.age?.[r.k]?.[`${col}_${s}`]||0;})));
+    DISC_ROWS.forEach(r=>DISC_COLS.forEach(col=>{c.disc[r.k][col]+=d.labo?.disc?.[r.k]?.[col]||0;}));
+    ['rejetes','retests','invalides','interruptions'].forEach(k=>{c.labo[k]+=d.labo?.[k]||0;});
+    VIH_AGES.forEach(age=>['H','F'].forEach(sex=>VIH_COLS.forEach(col=>{c.vih[age][sex][col]+=d.vih?.ages?.[age]?.[sex]?.[col]||0;})));
+    HEP_ROWS.forEach(r=>[...HEP_IST_AGES,'ENS'].forEach(age=>{
+      c.hep_grid[r.k][age].H+=d.hepatites?.grid?.[r.k]?.[age]?.H||0;
+      c.hep_grid[r.k][age].F+=d.hepatites?.grid?.[r.k]?.[age]?.F||0;
+    }));
+    HEP_SIMPLE.forEach(k=>{c.hep_simple[k]+=d.hepatites?.simple?.[k]||0;});
+    IST_ROWS.forEach(r=>[...HEP_IST_AGES,'ENS'].forEach(age=>{
+      c.ist_grid[r.k][age].H+=d.ist?.grid?.[r.k]?.[age]?.H||0;
+      c.ist_grid[r.k][age].F+=d.ist?.grid?.[r.k]?.[age]?.F||0;
+    }));
+  });
+  return c;
+}
+
+function buildSmCumul(docs){
+  const c={};
+  Object.entries(EXAMENS).forEach(([sec,exams])=>{
+    c[sec]={};
+    exams.forEach(ex=>{
+      if(ex.type==='negpos') c[sec][ex.k]={negH:0,negF:0,posH:0,posF:0};
+      else c[sec][ex.k]={H:0,F:0};
+    });
+  });
+  docs.forEach(d=>{
+    if(!d.sm)return;
+    Object.entries(EXAMENS).forEach(([sec,exams])=>{
+      exams.forEach(ex=>{
+        const v=d.sm[sec]?.[ex.k]; if(!v)return;
+        if(ex.type==='negpos'){['negH','negF','posH','posF'].forEach(f=>{c[sec][ex.k][f]+=v[f]||0;});}
+        else{['H','F'].forEach(f=>{c[sec][ex.k][f]+=v[f]||0;});}
+      });
+    });
+  });
+  return c;
+}
+
+function renderSynthese(el,cum,mLabel,year,jours){
+  const totVih=VIH_AGES.reduce((a,age)=>a+(cum.vih[age].H.testees||0)+(cum.vih[age].F.testees||0),0);
+  const posVih=VIH_AGES.reduce((a,age)=>a+(cum.vih[age].H.positives||0)+(cum.vih[age].F.positives||0),0);
+  const trVih=VIH_AGES.reduce((a,age)=>a+(cum.vih[age].H.traitement||0)+(cum.vih[age].F.traitement||0),0);
+  const txPos=totVih>0?((posVih/totVih)*100).toFixed(1):'0.0';
+  const totEx=cum.disc.examens_realises?.total||0;
+  const hepPos=(cum.hep_grid.tot_pos_hep?.ENS?.H||0)+(cum.hep_grid.tot_pos_hep?.ENS?.F||0);
+  const istPos=(cum.ist_grid.tot_porteuses_ist?.ENS?.H||0)+(cum.ist_grid.tot_porteuses_ist?.ENS?.F||0);
+
+  const vihRows=VIH_AGES.map(age=>['H','F'].map(sex=>`<tr>
+    <td class="s0" style="font-size:9px">${sex==='H'?age:''}</td><td class="s1">${sex}</td>
+    ${VIH_COLS.map(col=>`<td>${cum.vih[age][sex][col]||0}</td>`).join('')}
+  </tr>`).join('')).join('');
+  const vihTots=VIH_COLS.map(col=>`<td style="color:var(--prd);font-weight:700">${VIH_AGES.reduce((a,age)=>a+(cum.vih[age].H[col]||0)+(cum.vih[age].F[col]||0),0)}</td>`).join('');
+
+  el.innerHTML=`
+    <div style="font-size:12px;color:var(--mi);margin-bottom:12px;font-weight:600">📅 ${mLabel} ${year} · ${jours} jour(s)</div>
+    <div class="kpis">
+      <div class="kpi"><div class="kv">${totEx}</div><div class="kl">Examens RMA réalisés</div></div>
+      <div class="kpi r"><div class="kv" style="color:var(--re)">${posVih}</div><div class="kl">VIH positifs</div></div>
+      <div class="kpi g"><div class="kv" style="color:var(--gr)">${trVih}</div><div class="kl">Mis sous traitement</div></div>
+      <div class="kpi a"><div class="kv" style="color:var(--am)">${txPos}%</div><div class="kl">Taux positivité VIH</div></div>
+      <div class="kpi"><div class="kv">${totVih}</div><div class="kl">Tests VIH réalisés</div></div>
+      <div class="kpi pu"><div class="kv" style="color:var(--pu)">${hepPos}</div><div class="kl">Hépatites positives</div></div>
+      <div class="kpi a"><div class="kv" style="color:var(--am)">${istPos}</div><div class="kl">Porteurs IST</div></div>
+      <div class="kpi r"><div class="kv" style="color:var(--re)">${cum.labo.interruptions}</div><div class="kl">Jours interruption labo</div></div>
+    </div>
+    <div class="sc"><div class="sch"><span class="tag" style="background:var(--prl);color:var(--pr)">VI.1</span>Activités du laboratoire</div>
+    <div class="scb">
+      <div style="overflow-x:auto;margin-bottom:8px"><table class="st">
+        <thead><tr><th rowspan="2">Indicateur</th><th colspan="2">&lt;5ans</th><th colspan="2">5-14ans</th><th colspan="2">≥15ans</th><th colspan="2">Total</th></tr>
+        <tr><th>H</th><th>F</th><th>H</th><th>F</th><th>H</th><th>F</th><th>H</th><th>F</th></tr></thead>
+        <tbody>${LAB_ROWS.map(r=>`<tr><td>${r.l}</td><td>${cum.age[r.k].lt5H||0}</td><td>${cum.age[r.k].lt5F||0}</td><td>${cum.age[r.k].c5_14H||0}</td><td>${cum.age[r.k].c5_14F||0}</td><td>${cum.age[r.k].ge15H||0}</td><td>${cum.age[r.k].ge15F||0}</td><td>${cum.age[r.k].totH||0}</td><td>${cum.age[r.k].totF||0}</td></tr>`).join('')}</tbody>
+      </table></div>
+      <div style="overflow-x:auto"><table class="st">
+        <thead><tr><th>Examens</th><th>Biochimie</th><th>Hémato.</th><th>Sérologie</th><th>Parasito.</th><th>Bactério.</th><th>Autres</th><th>Total</th></tr></thead>
+        <tbody>${DISC_ROWS.map(r=>`<tr><td>${r.l}</td>${DISC_COLS.map(c=>`<td>${cum.disc[r.k][c]||0}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table></div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--mi)">
+        <span>Rejetés: <b>${cum.labo.rejetes}</b></span>
+        <span>Retests: <b>${cum.labo.retests}</b></span>
+        <span>Invalidés: <b>${cum.labo.invalides}</b></span>
+        <span>Interruption: <b style="color:var(--re)">${cum.labo.interruptions}j</b></span>
+      </div>
+    </div></div>
+    <div class="sc"><div class="sch"><span class="tag" style="background:var(--rel);color:var(--re)">V.2.1</span>Dépistage du VIH — grille complète</div>
+    <div class="scb"><div class="tw" style="margin:0;padding:0"><table class="agt" style="font-size:10px">
+      <thead><tr><th class="s0" rowspan="2">Âge</th><th class="s1" rowspan="2">S</th>
+      ${VIH_COL_L.map(l=>`<th>${l}</th>`).join('')}</tr><tr></tr></thead>
+      <tbody>${vihRows}</tbody>
+      <tfoot><tr style="background:var(--prl)">
+        <td class="s0" style="font-weight:800;color:var(--prd)">TOTAL</td>
+        <td class="s1"></td>${vihTots}
+      </tr></tfoot>
+    </table></div></div></div>
+    <button class="btn p" style="width:100%;margin-bottom:8px" onclick="exportRMAPDF_full()">📄 Exporter PDF — Rapport RMA DHIS2</button>`;
+}
+
+function renderRapport(el,cumSm,cumRma,mLabel,year,jours){
+  let no=1;
+  function rowNegPos(ex){
+    const sec=Object.keys(EXAMENS).find(s=>EXAMENS[s].some(e=>e.k===ex.k));
+    const v=cumSm[sec][ex.k];
+    const tot=(v.negH||0)+(v.negF||0)+(v.posH||0)+(v.posF||0);
+    return `<tr>
+      <td style="text-align:center;font-family:var(--mo);color:var(--mi)">${no++}</td>
+      <td style="text-align:left;font-weight:600">${ex.l}</td>
+      <td>${v.negH||0}</td><td>${v.negF||0}</td>
+      <td style="color:var(--re);font-weight:700">${v.posH||0}</td>
+      <td style="color:var(--re);font-weight:700">${v.posF||0}</td>
+      <td style="background:var(--prl);color:var(--prd);font-weight:700">${tot}</td>
+    </tr>`;
+  }
+  function rowCount(ex,sec){
+    const v=cumSm[sec][ex.k];
+    const tot=(v.H||0)+(v.F||0);
+    return `<tr>
+      <td style="text-align:center;font-family:var(--mo);color:var(--mi)">${no++}</td>
+      <td style="text-align:left;font-weight:600">${ex.l}</td>
+      <td>${v.H||0}</td><td>${v.F||0}</td>
+      <td colspan="2" style="color:var(--mi);font-size:10px;text-align:center">—</td>
+      <td style="background:var(--prl);color:var(--prd);font-weight:700">${tot}</td>
+    </tr>`;
+  }
+  const TH=`<tr style="background:var(--pr);color:#fff">
+    <th style="width:32px">N°</th>
+    <th style="text-align:left">INDICATEURS (EXAMENS)</th>
+    <th>NÉG-H</th><th>NÉG-F</th>
+    <th>POS-H</th><th>POS-F</th>
+    <th>TOTAL</th>
+  </tr>`;
+  const secHdr=(label,color)=>`<tr><td colspan="7" style="background:${color};color:#fff;font-weight:800;font-size:11px;padding:5px 8px;text-transform:uppercase;letter-spacing:.5px">${label}</td></tr>`;
+
+  // ── VIH grid helper
+  const vihRows=VIH_AGES.map(age=>['H','F'].map(sex=>`<tr>
+    <td class="s0" style="font-size:9px">${sex==='H'?age:''}</td>
+    <td class="s1">${sex}</td>
+    ${VIH_COLS.map(col=>`<td>${cumRma.vih[age][sex][col]||0}</td>`).join('')}
+  </tr>`).join('')).join('');
+  const vihTots=VIH_COLS.map(col=>`<td style="color:var(--prd);font-weight:700">${VIH_AGES.reduce((a,age)=>a+(cumRma.vih[age].H[col]||0)+(cumRma.vih[age].F[col]||0),0)}</td>`).join('');
+
+  // ── Hépatites grid helper
+  function hepGridHtml(){
+    const ages=[...HEP_IST_AGES,'ENS'];
+    let th=`<tr><th class="s0" rowspan="2" style="min-width:120px">Indicateur</th>`;
+    HEP_IST_AGES.forEach(a=>{th+=`<th colspan="3" style="font-size:9px">${a}</th>`;});
+    th+=`<th colspan="3" style="background:var(--aml);color:var(--am)">ENS</th></tr><tr>`;
+    ages.forEach(()=>{th+=`<th>H</th><th>F</th><th>T</th>`;});
+    th+=`</tr>`;
+    const rows=HEP_ROWS.map(row=>{
+      let cells=ages.map(age=>{
+        const h=cumRma.hep_grid[row.k]?.[age]?.H||0;
+        const f=cumRma.hep_grid[row.k]?.[age]?.F||0;
+        const bg=age==='ENS'?`style="background:var(--aml);font-weight:700"`:'';
+        return `<td ${bg}>${h}</td><td ${bg}>${f}</td><td ${bg} style="font-weight:700">${h+f}</td>`;
+      }).join('');
+      return `<tr><td class="s0" style="font-size:9px;white-space:normal">${row.l}</td>${cells}</tr>`;
+    }).join('');
+    return `<thead>${th}</thead><tbody>${rows}</tbody>`;
+  }
+
+  // ── IST grid helper
+  function istGridHtml(){
+    const ages=[...HEP_IST_AGES,'ENS'];
+    let th=`<tr><th class="s0" rowspan="2" style="min-width:120px">Indicateur</th>`;
+    HEP_IST_AGES.forEach(a=>{th+=`<th colspan="3" style="font-size:9px">${a}</th>`;});
+    th+=`<th colspan="3" style="background:var(--pul);color:var(--pu)">ENS</th></tr><tr>`;
+    ages.forEach(()=>{th+=`<th>H</th><th>F</th><th>T</th>`;});
+    th+=`</tr>`;
+    const rows=IST_ROWS.map(row=>{
+      let cells=ages.map(age=>{
+        const h=cumRma.ist_grid[row.k]?.[age]?.H||0;
+        const f=cumRma.ist_grid[row.k]?.[age]?.F||0;
+        const bg=age==='ENS'?`style="background:var(--pul);font-weight:700"`:'';
+        return `<td ${bg}>${h}</td><td ${bg}>${f}</td><td ${bg} style="font-weight:700">${h+f}</td>`;
+      }).join('');
+      return `<tr><td class="s0" style="font-size:9px;white-space:normal">${row.l}</td>${cells}</tr>`;
+    }).join('');
+    return `<thead>${th}</thead><tbody>${rows}</tbody>`;
+  }
+
+  // KPI summary
+  const totVih=VIH_AGES.reduce((a,age)=>a+(cumRma.vih[age].H.testees||0)+(cumRma.vih[age].F.testees||0),0);
+  const posVih=VIH_AGES.reduce((a,age)=>a+(cumRma.vih[age].H.positives||0)+(cumRma.vih[age].F.positives||0),0);
+  const hepPos=(cumRma.hep_grid.tot_pos_hep?.ENS?.H||0)+(cumRma.hep_grid.tot_pos_hep?.ENS?.F||0);
+  const istPos=(cumRma.ist_grid.tot_porteuses_ist?.ENS?.H||0)+(cumRma.ist_grid.tot_porteuses_ist?.ENS?.F||0);
+  // Total examens from section mère
+  let totalExamens=0;
+  Object.entries(EXAMENS).forEach(([sec,exams])=>exams.forEach(ex=>{
+    const v=cumSm[sec][ex.k];
+    totalExamens+=ex.type==='negpos'?(v.negH||0)+(v.negF||0)+(v.posH||0)+(v.posF||0):(v.H||0)+(v.F||0);
+  }));
+
+  el.innerHTML=`
+    <div style="font-size:12px;color:var(--mi);margin-bottom:10px;font-weight:600">
+      📋 ${mLabel} ${year} — Rapport Mensuel des Examens du Laboratoire · ${jours} jour(s)
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpis" style="margin-bottom:12px">
+      <div class="kpi"><div class="kv">${totalExamens}</div><div class="kl">Total examens réalisés</div></div>
+      <div class="kpi r"><div class="kv" style="color:var(--re)">${posVih}</div><div class="kl">VIH positifs / ${totVih} testés</div></div>
+      <div class="kpi pu"><div class="kv" style="color:var(--pu)">${hepPos}</div><div class="kl">Hépatites positives</div></div>
+      <div class="kpi a"><div class="kv" style="color:var(--am)">${istPos}</div><div class="kl">Porteurs IST</div></div>
+    </div>
+
+    <!-- TABLEAU PRINCIPAL EXAMENS -->
+    <div class="sc"><div class="sch">📋 Tableau des examens par discipline</div>
+    <div class="scb" style="overflow-x:auto">
+    <table class="st" style="font-size:11px;min-width:480px">
+      <thead>${TH}</thead>
+      <tbody>
+        ${secHdr('🔬 SÉROLOGIE','#1d4ed8')}
+        ${EXAMENS.serologie.map(ex=>rowNegPos(ex)).join('')}
+        ${secHdr('🩸 HÉMATOLOGIE','#374151')}
+        ${EXAMENS.hematologie.map(ex=>rowCount(ex,'hematologie')).join('')}
+        ${secHdr('🦠 PARASITOLOGIE','#065f46')}
+        ${EXAMENS.parasitologie.map(ex=>rowNegPos(ex)).join('')}
+        ${secHdr('🧫 BACTÉRIOLOGIE','#6b21a8')}
+        ${EXAMENS.bacteriologie.map(ex=>rowNegPos(ex)).join('')}
+        ${secHdr('⚗️ BIOCHIMIE','#92400e')}
+        ${EXAMENS.biochimie.map(ex=>rowCount(ex,'biochimie')).join('')}
+        ${secHdr('🩺 TRANSFUSION','#1e293b')}
+        ${EXAMENS.transfusion.map(ex=>rowCount(ex,'transfusion')).join('')}
+        ${secHdr('🧪 HORMONOLOGIE (iChroma)','#7c3aed')}
+        ${EXAMENS.hormonologie.map(ex=>rowNegPos(ex)).join('')}
+      </tbody>
+    </table>
+    </div></div>
+
+    <!-- VIH GRILLE -->
+    <div class="sc"><div class="sch"><span class="tag" style="background:var(--rel);color:var(--re)">V.2.1</span>Dépistage du VIH — Grille par âge et sexe</div>
+    <div class="scb"><div class="tw" style="margin:0;padding:0"><table class="agt" style="font-size:10px">
+      <thead>
+        <tr><th class="s0" rowspan="2">Âge</th><th class="s1" rowspan="2">S</th>
+        ${VIH_COL_L.map(l=>`<th>${l}</th>`).join('')}</tr><tr></tr>
+      </thead>
+      <tbody>${vihRows}</tbody>
+      <tfoot><tr style="background:var(--prl)">
+        <td class="s0" style="font-weight:800;color:var(--prd)">TOTAL</td>
+        <td class="s1"></td>${vihTots}
+      </tr></tfoot>
+    </table></div></div></div>
+
+    <!-- HÉPATITES GRILLE -->
+    <div class="sc"><div class="sch"><span class="tag" style="background:var(--aml);color:var(--am)">V.2.6</span>Hépatites virales — Grille par âge et sexe</div>
+    <div class="scb"><div class="tw" style="margin:0;padding:0">
+      <table class="agt" style="font-size:10px">${hepGridHtml()}</table>
+    </div>
+    ${Object.values(cumRma.hep_simple).some(v=>v>0)?`
+    <div style="margin-top:8px"><table class="st">
+      <thead><tr><th>Suivi thérapeutique</th><th>Valeur</th></tr></thead>
+      <tbody>
+        <tr><td>Enregistrés HVC+HVB co-inf. VIH</td><td>${cumRma.hep_simple.coinf_total||0}</td></tr>
+        <tr><td>HVC ayant fait charge virale</td><td>${cumRma.hep_simple.cv_hvc||0}</td></tr>
+        <tr><td>HVC+ éligibles traitement</td><td>${cumRma.hep_simple.hvc_elig||0}</td></tr>
+        <tr><td>HVB+ éligibles traitement</td><td>${cumRma.hep_simple.hvb_elig||0}</td></tr>
+        <tr><td>Nouveaux HVB+ sous traitement</td><td>${cumRma.hep_simple.hvb_new_trait||0}</td></tr>
+        <tr><td>Suppression charge virale HVB+</td><td>${cumRma.hep_simple.hvb_sup_cv||0}</td></tr>
+        <tr><td>Guéris hépatite C</td><td>${cumRma.hep_simple.hvc_gueri||0}</td></tr>
+      </tbody>
+    </table></div>`:''}
+    </div></div>
+
+    <!-- IST GRILLE -->
+    <div class="sc"><div class="sch"><span class="tag" style="background:var(--pul);color:var(--pu)">IST</span>Infections Sexuellement Transmissibles — Grille par âge et sexe</div>
+    <div class="scb"><div class="tw" style="margin:0;padding:0">
+      <table class="agt" style="font-size:10px">${istGridHtml()}</table>
+    </div></div></div>
+
+    <!-- EXPORT BUTTONS -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn cy" style="flex:1" onclick="exportRapportPDF()">📄 PDF — Rapport Mensuel Examens</button>
+      <button class="btn p" style="flex:1" onclick="exportRMAPDF_full()">📊 PDF — Rapport RMA DHIS2</button>
+    </div>
+    <div style="font-size:10px;color:var(--li);text-align:center;font-family:var(--mo)">
+      Généré le ${new Date().toLocaleDateString('fr-FR')} — HRA Mokolo / Laboratoire
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+// PDF RAPPORT MENSUEL LABO
+// ══════════════════════════════════════════
+// ── Lazy load jsPDF uniquement au moment de l'export ──
+let jsPDFLoaded = false;
+function loadJsPDF(callback) {
+  if (jsPDFLoaded) { callback(); return; }
+  toast('⏳ Chargement PDF…', 'w');
+  const s1 = document.createElement('script');
+  s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  s1.onload = () => {
+    const s2 = document.createElement('script');
+    s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+    s2.onload = () => { jsPDFLoaded = true; callback(); };
+    s2.onerror = () => toast('Erreur chargement PDF — vérifiez votre connexion', 'e');
+    document.head.appendChild(s2);
+  };
+  s1.onerror = () => toast('Erreur chargement PDF — vérifiez votre connexion', 'e');
+  document.head.appendChild(s1);
+}
+
+function exportRapportPDF(){
+  if(!lastRapportCum){toast('Générez d\'abord le rapport','e');return;}
+  loadJsPDF(_doExportRapportPDF);
+}
+function _doExportRapportPDF(){
+  if(!lastRapportCum){return;}
+  const {cumSm,cumRma,mLabel,year,month,jours}=lastRapportCum;
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const BL=[29,78,216],GR=[100,116,139];
+  const W=210,M=14;
+  doc.setFillColor(...BL);doc.rect(0,0,W,30,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(13);doc.setFont('helvetica','bold');
+  doc.text('RAPPORT MENSUEL DES EXAMENS DU LABORATOIRE',M,11);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');
+  doc.text('Hopital Regional Annexe de Mokolo - Service de Laboratoire',M,17);
+  doc.text('MOIS : '+mLabel.toUpperCase()+' '+year+'  |  Jours : '+jours,M,23);
+  doc.setTextColor(0,0,0);
+  let y=35;
+  const colW=[10,62,18,18,18,18,20];
+  const tableW=W-2*M;
+  function secRow(label,color){
+    if(y>270){doc.addPage();y=14;}
+    doc.setFillColor(...color);doc.rect(M,y,tableW,6,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont('helvetica','bold');
+    doc.text(label,M+2,y+4.2);doc.setTextColor(0,0,0);y+=6;
+  }
+  function examRow(no,label,negH,negF,posH,posF,tot,isCount){
+    if(y>272){doc.addPage();y=14;}
+    const bg=no%2===0?[248,250,252]:[255,255,255];
+    doc.setFillColor(...bg);doc.rect(M,y,tableW,5.5,'F');
+    doc.setDrawColor(226,232,240);doc.rect(M,y,tableW,5.5,'S');
+    doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(30,41,59);
+    let x=M;
+    doc.text(String(no),x+colW[0]/2,y+3.8,{align:'center'});x+=colW[0];
+    doc.text(label.substring(0,38),x+1,y+3.8);x+=colW[1];
+    doc.text(String(negH),x+colW[2]/2,y+3.8,{align:'center'});x+=colW[2];
+    doc.text(String(negF),x+colW[3]/2,y+3.8,{align:'center'});x+=colW[3];
+    if(isCount){
+      doc.setTextColor(180,180,180);
+      doc.text('-',x+colW[4]/2,y+3.8,{align:'center'});x+=colW[4];
+      doc.text('-',x+colW[5]/2,y+3.8,{align:'center'});x+=colW[5];
+    }else{
+      doc.setTextColor(220,38,38);doc.setFont('helvetica','bold');
+      doc.text(String(posH),x+colW[4]/2,y+3.8,{align:'center'});x+=colW[4];
+      doc.text(String(posF),x+colW[5]/2,y+3.8,{align:'center'});x+=colW[5];
+    }
+    doc.setTextColor(29,78,216);doc.setFont('helvetica','bold');
+    doc.text(String(tot),x+colW[6]/2,y+3.8,{align:'center'});
+    doc.setTextColor(0,0,0);doc.setFont('helvetica','normal');
+    y+=5.5;
+  }
+  // Table header
+  doc.setFillColor(...BL);doc.rect(M,y,tableW,7,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(7.5);doc.setFont('helvetica','bold');
+  let x=M;
+  ['N','INDICATEURS (EXAMENS)','NEG-H','NEG-F','POS-H','POS-F','TOTAL'].forEach((h,i)=>{
+    doc.text(h,x+colW[i]/2,y+4.5,{align:'center'});x+=colW[i];
+  });
+  doc.setTextColor(0,0,0);y+=7;
+  let no=1;
+  const SC={serologie:[29,78,216],hematologie:[55,65,81],parasitologie:[6,95,70],bacteriologie:[107,33,168],biochimie:[146,64,14],transfusion:[30,41,59],hormonologie:[124,58,237]};
+  const SL={serologie:'SEROLOGIE',hematologie:'HEMATOLOGIE',parasitologie:'PARASITOLOGIE',bacteriologie:'BACTERIOLOGIE',biochimie:'BIOCHIMIE',transfusion:'TRANSFUSION',hormonologie:'HORMONOLOGIE (iChroma)'};
+  Object.entries(EXAMENS).forEach(([sec,exams])=>{
+    secRow(SL[sec],SC[sec]);
+    exams.forEach(ex=>{
+      const v=cumSm[sec][ex.k];
+      if(ex.type==='negpos'){
+        const tot=(v.negH||0)+(v.negF||0)+(v.posH||0)+(v.posF||0);
+        examRow(no++,ex.l,v.negH||0,v.negF||0,v.posH||0,v.posF||0,tot,false);
+      }else{
+        const tot=(v.H||0)+(v.F||0);
+        examRow(no++,ex.l,v.H||0,v.F||0,0,0,tot,true);
+      }
+    });
+  });
+  // PAGE 2 VIH
+  doc.addPage();y=14;
+  doc.setFillColor(220,38,38);doc.rect(0,0,W,18,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text('V.2.1 - DEPISTAGE DU VIH - Grille par age et sexe',M,12);
+  doc.setTextColor(0,0,0);y=22;
+  const vihH=[['Age','S','1.Testees','2.Retires','3.Positives','4.Nv.Pos.','5.Traitement','6.Indet.']];
+  const vihB=[];
+  VIH_AGES.forEach(age=>['H','F'].forEach(sex=>{
+    vihB.push([sex==='H'?age:'',sex,...VIH_COLS.map(col=>cumRma.vih[age][sex][col]||0)]);
+  }));
+  const vTot=['TOTAL','',...VIH_COLS.map(col=>VIH_AGES.reduce((a,age)=>a+(cumRma.vih[age].H[col]||0)+(cumRma.vih[age].F[col]||0),0))];
+  doc.autoTable({head:vihH,body:[...vihB,vTot],startY:y,margin:{left:M,right:M},styles:{fontSize:7,cellPadding:1.5},headStyles:{fillColor:[220,38,38],textColor:255,fontStyle:'bold'},
+    didParseCell:d=>{if(d.row.index===vihB.length){d.cell.styles.fillColor=[239,246,255];d.cell.styles.textColor=[29,78,216];d.cell.styles.fontStyle='bold';}}
+  });
+  // PAGE 3 Hepatites
+  doc.addPage();y=14;
+  doc.setFillColor(217,119,6);doc.rect(0,0,W,18,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text('V.2.6 - HEPATITES VIRALES - Grille par age et sexe',M,12);
+  doc.setTextColor(0,0,0);y=22;
+  const agesHep=[...HEP_IST_AGES,'ENS'];
+  const hepH=[['Indicateur',...agesHep.flatMap(a=>[a+' H',a+' F',a+' T'])]];
+  const hepB=HEP_ROWS.map(r=>[r.l.substring(0,40),...agesHep.flatMap(age=>{
+    const h=cumRma.hep_grid[r.k]?.[age]?.H||0,f=cumRma.hep_grid[r.k]?.[age]?.F||0;
+    return[h,f,h+f];
+  })]);
+  doc.autoTable({head:hepH,body:hepB,startY:y,margin:{left:M,right:M},styles:{fontSize:5.5,cellPadding:1},headStyles:{fillColor:[217,119,6],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[255,251,235]}});
+  // PAGE 4 IST
+  doc.addPage();y=14;
+  doc.setFillColor(124,58,237);doc.rect(0,0,W,18,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text('IST - Infections Sexuellement Transmissibles - Grille par age et sexe',M,12);
+  doc.setTextColor(0,0,0);y=22;
+  const istH=[['Indicateur',...agesHep.flatMap(a=>[a+' H',a+' F',a+' T'])]];
+  const istB=IST_ROWS.map(r=>[r.l.substring(0,40),...agesHep.flatMap(age=>{
+    const h=cumRma.ist_grid[r.k]?.[age]?.H||0,f=cumRma.ist_grid[r.k]?.[age]?.F||0;
+    return[h,f,h+f];
+  })]);
+  doc.autoTable({head:istH,body:istB,startY:y,margin:{left:M,right:M},styles:{fontSize:5.5,cellPadding:1},headStyles:{fillColor:[124,58,237],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[245,243,255]}});
+  // Footers
+  const pages=doc.getNumberOfPages();
+  for(let i=1;i<=pages;i++){
+    doc.setPage(i);doc.setFontSize(7);doc.setTextColor(...GR);
+    doc.text('HRA Mokolo - Rapport Mensuel Examens | '+mLabel+' '+year+' | Page '+i+'/'+pages,M,292);
+    doc.text('MINSANTE - Cameroun',W-M,292,{align:'right'});
+  }
+  doc.save('Rapport_Mensuel_Labo_'+year+'_'+month+'.pdf');
+  toast('PDF Rapport Mensuel exporte !','s');
+}
+
+function exportRMAPDF_full(){
+  loadJsPDF(()=>toast('Utilisez l\'onglet Rapport Mensuel pour le PDF complet','w'));
+}
+
+function exportRMAPDF(){
+  if(!lastCum){toast('Générez d\'abord la synthèse','e');return;}
+  loadJsPDF(()=>toast('✅ Utilisez l\'onglet Rapport Mensuel pour exporter le PDF','s'));
+}
+
+// ══════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════
+function showTab(name,btn){
+  // sync top nav and bottom nav visually
+}
+function showMainTab(name,btn){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.getElementById('pane-'+name).classList.add('on');
+  document.querySelectorAll('.tnav button').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.bn button').forEach(b=>b.classList.remove('on'));
+  // sync both navs
+  const tabIdx={'saisie':0,'historique':1,'synthese':2,'rapport':3};
+  const idx=tabIdx[name];
+  document.querySelectorAll('.tnav button')[idx]?.classList.add('on');
+  document.querySelectorAll('.bn button')[idx]?.classList.add('on');
+  if(name==='historique')loadHistory();
+}
+function tgSec(h){h.classList.toggle('on');h.nextElementSibling.classList.toggle('on');}
+function initSel(){
+  const now=new Date();
+  ['histMonth','synthMonth','rapportMonth'].forEach(id=>{
+    const sel=document.getElementById(id);
+    MONTHS.forEach((m,i)=>{const o=document.createElement('option');o.value=i+1;o.textContent=m;if(i===now.getMonth())o.selected=true;sel.appendChild(o);});
+  });
+  ['histYear','synthYear','rapportYear'].forEach(id=>{
+    const sel=document.getElementById(id);
+    for(let y=2024;y<=2028;y++){const o=document.createElement('option');o.value=y;o.textContent=y;if(y===now.getFullYear())o.selected=true;sel.appendChild(o);}
+  });
+}
+function toast(msg,t=''){const el=document.getElementById('toast');el.textContent=msg;el.className='on '+(t==='s'?'s':t==='e'?'e':t==='w'?'w':'');setTimeout(()=>el.className='',3500);}
+function fmt(s){const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;}
+function today(){return new Date().toISOString().slice(0,10);}
+function sumVih(ages,col){if(!ages)return 0;let s=0;Object.values(ages).forEach(sx=>{if(sx)Object.values(sx).forEach(f=>{s+=f?.[col]||0;});});return s;}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+// Build all exam tables
+buildExamTable('sero-body',     EXAMENS.serologie);
+buildExamTable('hemato-body',   EXAMENS.hematologie);
+buildExamTable('parasito-body', EXAMENS.parasitologie);
+buildExamTable('bacterio-body', EXAMENS.bacteriologie);
+buildExamTable('biochimie-body',EXAMENS.biochimie);
+buildExamTable('transfusion-body',EXAMENS.transfusion);
+buildExamTable('hormono-body',  EXAMENS.hormonologie);
+
+// Build RMA tables
+buildLabTable(); buildDiscTable(); buildVihTable(); buildHepTable(); buildIstTable();
+
+initSel();
+const td=today();
+document.getElementById('saisieDate').value=td;
+document.getElementById('saisieDate').addEventListener('change',e=>{
+  clearInputs();
+  listenToDay(e.target.value);
+});
+
+// Top nav clicks
+document.querySelectorAll('.tnav button').forEach((btn,i)=>{
+  const names=['saisie','historique','synthese','rapport'];
+  btn.addEventListener('click',()=>showMainTab(names[i],btn));
+});
+
+db.collection(COL).limit(1).get()
+  .then(()=>{document.getElementById('dot').className='dot';document.getElementById('cLbl').textContent='Connecté';})
+  .catch(()=>{document.getElementById('dot').className='dot r';document.getElementById('cLbl').textContent='Hors ligne';});
+loadDay(td);
+
+// ── PWA Install ──
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredPrompt=e;
+  const banner=document.getElementById('installBanner');
+  if(banner) banner.style.display='flex';
+});
+function installApp(){
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(()=>{
+    deferredPrompt=null;
+    const banner=document.getElementById('installBanner');
+    if(banner) banner.style.display='none';
+  });
+}
+window.addEventListener('appinstalled',()=>{
+  const banner=document.getElementById('installBanner');
+  if(banner) banner.style.display='none';
+  toast('✅ Application installée !','s');
+});
+</script>
+</body>
+</html>
